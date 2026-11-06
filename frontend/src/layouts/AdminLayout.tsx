@@ -1,10 +1,33 @@
-import { Outlet, NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, ClipboardCheck, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Outlet, NavLink, Link } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  User as UserIcon,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
 
 export const AdminLayout = () => {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
   const handleLogout = () => {
     console.log("Logout...");
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const navItems = [
     {
@@ -14,13 +37,8 @@ export const AdminLayout = () => {
     },
     {
       to: "/admin/employees",
-      label: "Data Karyawan",
+      label: "Employees",
       icon: <Users className="w-4 h-4" />,
-    },
-    {
-      to: "/admin/attendance",
-      label: "Monitoring Absensi",
-      icon: <ClipboardCheck className="w-4 h-4" />,
     },
   ];
 
@@ -29,11 +47,14 @@ export const AdminLayout = () => {
       <header className="bg-white border-b border-zinc-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <Link
+              to="/admin/dashboard"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
               <span className="font-bold text-lg text-zinc-900 tracking-tight">
                 DEXA
               </span>
-            </div>
+            </Link>
 
             <nav className="hidden md:flex items-center gap-1 ml-6">
               {navItems.map((item) => (
@@ -55,17 +76,59 @@ export const AdminLayout = () => {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-zinc-900">Elroy</p>
-            </div>
+          <div className="relative" ref={profileMenuRef}>
             <button
-              onClick={handleLogout}
-              className="p-2 text-zinc-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Keluar"
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl transition-colors cursor-pointer text-left focus:outline-none"
+              aria-expanded={isProfileOpen}
+              aria-haspopup="true"
             >
-              <LogOut className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-semibold text-xs shrink-0">
+                E
+              </div>
+              <ChevronDown
+                className={`w-4 h-4 text-zinc-400 transition-transform duration-200 hidden sm:block ${
+                  isProfileOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
+
+            {isProfileOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-zinc-200 shadow-lg py-1.5 z-50">
+                <div className="px-4 py-2.5 border-b border-zinc-100">
+                  <p className="text-sm font-semibold text-zinc-900">Elroy</p>
+                  <p className="text-xs text-zinc-500 truncate">
+                    HR Administrator
+                  </p>
+                </div>
+
+                <div className="py-1">
+                  <Link
+                    to="/admin/profile"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-zinc-700 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 text-zinc-500" />
+                    <span>Profile</span>
+                  </Link>
+                </div>
+
+                <div className="border-t border-zinc-100 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -15,8 +15,10 @@ type HistoryData = {
   checkInTime: string | null;
   checkOutTime: string | null;
   status: HistoryStatus;
-  note: string;
-  photoUrl?: string | null;
+  checkInNote: string;
+  checkInPhoto?: string | null;
+  checkOutNote?: string | null;
+  checkOutPhoto?: string | null;
 };
 
 const monthOptions = [
@@ -61,7 +63,10 @@ const Dashboard = () => {
     dayjs().format("MM"),
   );
   const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   const historyData: HistoryData[] = [
     {
@@ -70,9 +75,13 @@ const Dashboard = () => {
       checkInTime: "2026-11-01T08:45:00",
       checkOutTime: "2026-11-01T17:15:00",
       status: "ON_TIME",
-      note: "Worked on project X and completed tasks A, B, and C.",
-      photoUrl:
+      checkInNote: "Planning sprint tasks A, B, and C for project X.",
+      checkInPhoto:
         "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+      checkOutNote:
+        "Completed tasks A, B, and C and pushed PR for code review.",
+      checkOutPhoto:
+        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
     },
     {
       id: 2,
@@ -80,9 +89,13 @@ const Dashboard = () => {
       checkInTime: "2026-11-02T09:15:00",
       checkOutTime: "2026-11-02T17:30:00",
       status: "LATE",
-      note: "Traffic delay before switching to remote work.",
-      photoUrl:
+      checkInNote: "Traffic delay before switching to remote work.",
+      checkInPhoto:
         "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
+      checkOutNote:
+        "Wrapped up API integration and unit tests for auth module.",
+      checkOutPhoto:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
     },
     {
       id: 3,
@@ -90,8 +103,10 @@ const Dashboard = () => {
       checkInTime: null,
       checkOutTime: null,
       status: "LEAVE",
-      note: "Annual leave",
-      photoUrl: null,
+      checkInNote: "Annual leave",
+      checkInPhoto: null,
+      checkOutNote: null,
+      checkOutPhoto: null,
     },
     {
       id: 4,
@@ -99,8 +114,10 @@ const Dashboard = () => {
       checkInTime: null,
       checkOutTime: null,
       status: "SICK",
-      note: "Medical leave",
-      photoUrl: null,
+      checkInNote: "Medical leave",
+      checkInPhoto: null,
+      checkOutNote: null,
+      checkOutPhoto: null,
     },
     {
       id: 5,
@@ -108,8 +125,10 @@ const Dashboard = () => {
       checkInTime: null,
       checkOutTime: null,
       status: "ABSENT",
-      note: "",
-      photoUrl: null,
+      checkInNote: "",
+      checkInPhoto: null,
+      checkOutNote: null,
+      checkOutPhoto: null,
     },
     {
       id: 6,
@@ -117,9 +136,12 @@ const Dashboard = () => {
       checkInTime: "2026-11-07T08:50:00",
       checkOutTime: null,
       status: "ON_TIME",
-      note: "Working on attendance dashboard features and camera capture verification.",
-      photoUrl:
+      checkInNote:
+        "Working on attendance dashboard features and camera capture verification.",
+      checkInPhoto:
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+      checkOutNote: null,
+      checkOutPhoto: null,
     },
   ];
 
@@ -214,19 +236,25 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {todayAttendance?.checkInTime &&
-          (todayAttendance.photoUrl || todayAttendance.note) && (
-            <div className="mt-5 pt-4 border-t flex items-start gap-3.5 bg-zinc-50/70 p-3.5 rounded-xl border border-zinc-100">
-              {todayAttendance.photoUrl && (
+        {todayAttendance?.checkInTime && (
+          <div className="mt-5 pt-4 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Check-In Photo & Note */}
+            <div className="flex items-start gap-3.5 bg-zinc-50/70 p-3.5 rounded-xl border border-zinc-100">
+              {todayAttendance.checkInPhoto && (
                 <button
                   type="button"
-                  onClick={() => setSelectedPhoto(todayAttendance.photoUrl!)}
-                  className="group relative w-16 h-16 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                  title="Click to view full photo"
+                  onClick={() =>
+                    setSelectedPhoto({
+                      url: todayAttendance.checkInPhoto!,
+                      title: `Check-In Photo (${dayjs(todayAttendance.date).format("DD MMM YYYY")})`,
+                    })
+                  }
+                  className="group relative w-14 h-14 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                  title="Click to view check-in photo"
                 >
                   <img
-                    src={todayAttendance.photoUrl}
-                    alt="Today's WFH Proof"
+                    src={todayAttendance.checkInPhoto}
+                    alt="Today's Check-In Proof"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                   />
                   <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -236,14 +264,52 @@ const Dashboard = () => {
               )}
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-zinc-600">
-                  Daily Work Note
+                  Check-In Note
                 </p>
                 <p className="text-xs text-zinc-700 mt-1 leading-relaxed">
-                  {todayAttendance.note || "No note provided."}
+                  {todayAttendance.checkInNote || "No check-in note provided."}
                 </p>
               </div>
             </div>
-          )}
+
+            {/* Check-Out Photo & Note */}
+            <div className="flex items-start gap-3.5 bg-zinc-50/70 p-3.5 rounded-xl border border-zinc-100">
+              {todayAttendance.checkOutPhoto && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPhoto({
+                      url: todayAttendance.checkOutPhoto!,
+                      title: `Check-Out Photo (${dayjs(todayAttendance.date).format("DD MMM YYYY")})`,
+                    })
+                  }
+                  className="group relative w-14 h-14 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                  title="Click to view check-out photo"
+                >
+                  <img
+                    src={todayAttendance.checkOutPhoto}
+                    alt="Today's Check-Out Proof"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="w-4 h-4 text-white" />
+                  </div>
+                </button>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-zinc-600">
+                  Check-Out Note
+                </p>
+                <p className="text-xs text-zinc-700 mt-1 leading-relaxed">
+                  {todayAttendance.checkOutTime
+                    ? todayAttendance.checkOutNote ||
+                      "No check-out note provided."
+                    : "Not checked out yet."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="pt-5 mt-5 border-t border-zinc-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-xs text-zinc-500">
@@ -344,33 +410,82 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {(item.photoUrl || item.note) && (
-                <div className="mt-4 pt-3.5 border-t flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
-                  {item.photoUrl && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPhoto(item.photoUrl!)}
-                      className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                      title="Click to view full photo"
-                    >
-                      <img
-                        src={item.photoUrl}
-                        alt="WFH Proof"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <Eye className="w-3.5 h-3.5 text-white" />
-                      </div>
-                    </button>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-zinc-600">
-                      Daily Work Note
-                    </p>
-                    <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
-                      {item.note || "No note provided."}
-                    </p>
+              {(item.checkInPhoto ||
+                item.checkInNote ||
+                item.checkOutPhoto ||
+                item.checkOutNote) && (
+                <div className="mt-4 pt-3.5 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Check-In Photo & Note */}
+                  <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+                    {item.checkInPhoto && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedPhoto({
+                            url: item.checkInPhoto!,
+                            title: `Check-In Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
+                          })
+                        }
+                        className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                        title="Click to view check-in photo"
+                      >
+                        <img
+                          src={item.checkInPhoto}
+                          alt="Check-In Proof"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Eye className="w-3.5 h-3.5 text-white" />
+                        </div>
+                      </button>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-zinc-600">
+                        {item.checkInTime ? "Check-In Note" : "Attendance Note"}
+                      </p>
+                      <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                        {item.checkInNote || "No note provided."}
+                      </p>
+                    </div>
                   </div>
+
+                  {/* Check-Out Photo & Note */}
+                  {item.checkInTime && (
+                    <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+                      {item.checkOutPhoto && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedPhoto({
+                              url: item.checkOutPhoto!,
+                              title: `Check-Out Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
+                            })
+                          }
+                          className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                          title="Click to view check-out photo"
+                        >
+                          <img
+                            src={item.checkOutPhoto}
+                            alt="Check-Out Proof"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Eye className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        </button>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-zinc-600">
+                          Check-Out Note
+                        </p>
+                        <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                          {item.checkOutTime
+                            ? item.checkOutNote || "No check-out note provided."
+                            : "Not checked out yet."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -394,7 +509,7 @@ const Dashboard = () => {
           >
             <div className="p-4 border-b border-zinc-200 flex items-center justify-between">
               <h4 className="text-sm font-bold text-zinc-900">
-                WFH Photo Proof
+                {selectedPhoto.title}
               </h4>
               <button
                 type="button"
@@ -407,8 +522,8 @@ const Dashboard = () => {
             </div>
             <div className="p-4 bg-zinc-950 flex items-center justify-center">
               <img
-                src={selectedPhoto}
-                alt="WFH Proof Preview"
+                src={selectedPhoto.url}
+                alt={selectedPhoto.title}
                 className="max-h-[70vh] w-auto rounded-lg object-contain"
               />
             </div>

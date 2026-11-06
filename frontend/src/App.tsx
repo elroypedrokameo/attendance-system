@@ -3,10 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "@/pages/Login";
 import EmployeeDashboard from "@/pages/employee/Dashboard";
 import AdminDashboard from "@/pages/admin/Dashboard";
+import EmployeeList from "@/pages/admin/EmployeeList";
+import EmployeeDetail from "@/pages/admin/EmployeeDetail";
 import { EmployeeLayout } from "@/layouts/EmployeeLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { AttendanceAction } from "./pages/employee/AttendanceAction";
-import { EmployeeProfile } from "./pages/employee/Profile";
+import { Profile } from "@/pages/Profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,7 +34,7 @@ function App() {
             <Route path="dashboard" element={<EmployeeDashboard />} />
             <Route path="check-in" element={<AttendanceAction mode="in" />} />
             <Route path="check-out" element={<AttendanceAction mode="out" />} />
-            <Route path="profile" element={<EmployeeProfile />} />
+            <Route path="profile" element={<Profile role="EMPLOYEE" />} />
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>
@@ -41,6 +43,9 @@ function App() {
               element={<Navigate to="/admin/dashboard" replace />}
             ></Route>
             <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="employees" element={<EmployeeList />} />
+            <Route path="employees/:id" element={<EmployeeDetail />} />
+            <Route path="profile" element={<Profile role="ADMIN" />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/login" replace />} />
