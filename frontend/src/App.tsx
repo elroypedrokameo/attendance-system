@@ -6,6 +6,8 @@ import AdminDashboard from "@/pages/admin/Dashboard";
 import { EmployeeLayout } from "@/layouts/EmployeeLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { EmployeeCheckIn } from "./pages/employee/CheckIn";
+import { EmployeeCheckOut } from "./pages/employee/CheckOut";
+import { EmployeeProfile } from "./pages/employee/Profile";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +32,8 @@ function App() {
             ></Route>
             <Route path="dashboard" element={<EmployeeDashboard />} />
             <Route path="check-in" element={<EmployeeCheckIn />} />
+            <Route path="check-out" element={<EmployeeCheckOut />} />
+            <Route path="profile" element={<EmployeeProfile />} />
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>

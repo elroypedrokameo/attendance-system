@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from "react";
 import dayjs from "dayjs";
-import "dayjs/locale/id";
-
-dayjs.locale("id");
 
 export const LiveClock: React.FC = () => {
   const [time, setTime] = useState(dayjs());
@@ -18,7 +15,7 @@ export const LiveClock: React.FC = () => {
     <div className="bg-white p-6 rounded-xl border border-zinc-200 shadow-xs flex flex-col justify-between h-full">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Waktu Server & WFH
+          Server & WFH Time
         </p>
         <p className="text-sm font-medium text-zinc-800 mt-1">
           {time.format("dddd, DD MMMM YYYY")}
@@ -32,9 +29,7 @@ export const LiveClock: React.FC = () => {
             WIB
           </span>
         </p>
-        <p className="text-xs text-zinc-500 mt-1">
-          Batas Tepat Waktu: 09:00 WIB
-        </p>
+        <p className="text-xs text-zinc-500 mt-1">On-Time Limit: 09:00 WIB</p>
       </div>
     </div>
   );

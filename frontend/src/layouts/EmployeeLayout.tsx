@@ -1,93 +1,103 @@
-import { Outlet, NavLink } from "react-router-dom";
-import { Home, Camera, User as UserIcon, LogOut } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Outlet, Link } from "react-router-dom";
+import { User as UserIcon, LogOut, ChevronDown } from "lucide-react";
 
 export const EmployeeLayout = () => {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
   const handleLogout = () => {
     console.log("Logout...");
   };
 
-  const navItems = [
-    {
-      to: "/employee/dashboard",
-      label: "Dashboard",
-      icon: <Home className="w-4 h-4" />,
-    },
-    {
-      to: "/employee/check-in",
-      label: "Absen",
-      icon: <Camera className="w-4 h-4" />,
-    },
-    {
-      to: "/employee/profile",
-      label: "Profil Saya",
-      icon: <UserIcon className="w-4 h-4" />,
-    },
-  ];
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">
       <header className="bg-white border-b border-zinc-200 sticky top-0 z-40">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-lg text-zinc-900 tracking-tight">
-                DEXA
-              </span>
-            </div>
+          <Link
+            to="/employee/dashboard"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <span className="font-bold text-lg text-zinc-900 tracking-tight">
+              DEXA
+            </span>
+          </Link>
 
-            <nav className="hidden md:flex items-center gap-1 ml-6">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-zinc-100 text-zinc-900 font-semibold"
-                        : "text-zinc-600 hover:text-zinc-900 hover:bg-zinc-50"
-                    }`
-                  }
-                >
-                  {item.icon}
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-zinc-900">Elroy</p>
-              <p className="text-xs text-zinc-500">Software Engineer</p>
-            </div>
+          <div className="relative" ref={profileMenuRef}>
             <button
-              onClick={handleLogout}
-              className="p-2 text-zinc-500 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-              title="Keluar"
+              type="button"
+              onClick={() => setIsProfileOpen((prev) => !prev)}
+              className="flex items-center gap-2.5 p-1 sm:px-2.5 sm:py-1.5 rounded-xl  transition-colors cursor-pointer text-left focus:outline-none"
+              aria-expanded={isProfileOpen}
+              aria-haspopup="true"
             >
-              <LogOut className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-semibold text-xs shrink-0">
+                E
+              </div>
+              {/* <div className="text-left hidden sm:block">
+                <p className="text-sm font-semibold text-zinc-900 leading-tight">
+                  Elroy
+                </p>
+                <p className="text-xs text-zinc-500 leading-tight">
+                  Software Engineer
+                </p>
+              </div> */}
+              <ChevronDown
+                className={`w-4 h-4 text-zinc-400 transition-transform duration-200 hidden sm:block ${
+                  isProfileOpen ? "rotate-180" : ""
+                }`}
+              />
             </button>
-          </div>
-        </div>
 
-        <div className="md:hidden border-t border-zinc-100 px-4 py-2 flex justify-around bg-white">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              title={item.label}
-              aria-label={item.label}
-              className={({ isActive }) =>
-                `flex items-center justify-center p-2.5 rounded-lg transition-colors [&>svg]:w-5 [&>svg]:h-5 ${
-                  isActive
-                    ? "bg-zinc-100 text-zinc-900 font-semibold"
-                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50"
-                }`
-              }
-            >
-              {item.icon}
-            </NavLink>
-          ))}
+            {isProfileOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-zinc-200 shadow-lg py-1.5 z-50">
+                <div className="px-4 py-2.5 border-b border-zinc-100">
+                  <p className="text-sm font-semibold text-zinc-900">Elroy</p>
+                  <p className="text-xs text-zinc-500 truncate">
+                    Software Engineer
+                  </p>
+                </div>
+
+                <div className="py-1">
+                  <Link
+                    to="/employee/profile"
+                    onClick={() => setIsProfileOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-zinc-700 hover:text-zinc-900 hover:bg-zinc-50 transition-colors"
+                  >
+                    <UserIcon className="w-4 h-4 text-zinc-500" />
+                    <span>Profile</span>
+                  </Link>
+                </div>
+
+                <div className="border-t border-zinc-100 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-500" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
