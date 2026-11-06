@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from "react-router-dom";
-import { Home, Camera, Clock, User as UserIcon, LogOut } from "lucide-react";
+import { Home, Camera, User as UserIcon, LogOut } from "lucide-react";
 
 export const EmployeeLayout = () => {
   const handleLogout = () => {
@@ -16,11 +16,6 @@ export const EmployeeLayout = () => {
       to: "/employee/check-in",
       label: "Absen",
       icon: <Camera className="w-4 h-4" />,
-    },
-    {
-      to: "/employee/history",
-      label: "Riwayat Absensi",
-      icon: <Clock className="w-4 h-4" />,
     },
     {
       to: "/employee/profile",

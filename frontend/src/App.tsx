@@ -5,6 +5,7 @@ import EmployeeDashboard from "@/pages/employee/Dashboard";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import { EmployeeLayout } from "@/layouts/EmployeeLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { EmployeeCheckIn } from "./pages/employee/CheckIn";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ function App() {
               element={<Navigate to="/employee/dashboard" replace />}
             ></Route>
             <Route path="dashboard" element={<EmployeeDashboard />} />
+            <Route path="check-in" element={<EmployeeCheckIn />} />
           </Route>
 
           <Route path="/admin" element={<AdminLayout />}>
