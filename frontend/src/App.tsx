@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "@/pages/Login";
 import EmployeeDashboard from "@/pages/employee/Dashboard";
 import AdminDashboard from "@/pages/admin/Dashboard";
+import { EmployeeLayout } from "@/layouts/EmployeeLayout";
+import { AdminLayout } from "@/layouts/AdminLayout";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,7 +22,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          <Route path="/employee">
+          <Route path="/employee" element={<EmployeeLayout />}>
             <Route
               index
               element={<Navigate to="/employee/dashboard" replace />}
@@ -28,7 +30,7 @@ function App() {
             <Route path="dashboard" element={<EmployeeDashboard />} />
           </Route>
 
-          <Route path="/admin">
+          <Route path="/admin" element={<AdminLayout />}>
             <Route
               index
               element={<Navigate to="/admin/dashboard" replace />}
