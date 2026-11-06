@@ -7,12 +7,14 @@ interface CameraCaptureProps {
   onCapture: (file: File) => void;
   capturedPreview: string | null;
   onReset: () => void;
+  className?: string;
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
   onCapture,
   capturedPreview,
   onReset,
+  className = "",
 }) => {
   const webcamRef = useRef<Webcam>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -36,18 +38,18 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   };
 
   return (
-    <div className="w-full">
+    <div className={`w-full h-full flex flex-col flex-1 ${className}`}>
       {capturedPreview ? (
-        <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-3/4 sm:aspect-4/3 flex items-center justify-center">
+        <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-3/4 sm:aspect-4/3 lg:aspect-auto w-full h-full min-h-90 flex items-center justify-center flex-1">
           <img
             src={capturedPreview}
             alt="WFH Attendance Proof"
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute top-3 right-3 bg-emerald-600/90 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
+          <div className="absolute top-3 right-3 bg-emerald-600/90 text-white text-xs px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs z-10">
             <Check className="w-3.5 h-3.5" /> Photo Captured
           </div>
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
             <Button
               type="button"
               variant="secondary"
@@ -62,7 +64,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           </div>
         </div>
       ) : cameraError ? (
-        <div className="p-6 border-2 border-dashed border-rose-200 rounded-xl bg-rose-50/50 text-center">
+        <div className="p-6 border-2 border-dashed border-rose-200 rounded-xl bg-rose-50/50 text-center flex flex-col items-center justify-center flex-1 min-h-90">
           <AlertCircle className="w-8 h-8 mx-auto text-rose-500 mb-2" />
           <p className="text-sm font-medium text-slate-800 mb-1">
             Camera Unavailable
@@ -82,7 +84,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           </div>
         </div>
       ) : (
-        <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-3/4 sm:aspect-4/3">
+        <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 aspect-3/4 sm:aspect-4/3 lg:aspect-auto w-full h-full min-h-90 flex-1">
           <Webcam
             audio={false}
             ref={webcamRef}
@@ -93,13 +95,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                 "Camera access was denied or the device is not supported. Please allow camera permissions in your browser.",
               );
             }}
-            className="w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center pb-16 sm:pb-8">
             <div className="w-36 h-48 sm:w-44 sm:h-56 border-2 border-dashed border-white/50 rounded-[45%]" />
           </div>
 
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center px-4">
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center px-4 z-10">
             <Button
               type="button"
               variant="primary"

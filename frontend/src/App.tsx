@@ -5,8 +5,7 @@ import EmployeeDashboard from "@/pages/employee/Dashboard";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import { EmployeeLayout } from "@/layouts/EmployeeLayout";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import { EmployeeCheckIn } from "./pages/employee/CheckIn";
-import { EmployeeCheckOut } from "./pages/employee/CheckOut";
+import { AttendanceAction } from "./pages/employee/AttendanceAction";
 import { EmployeeProfile } from "./pages/employee/Profile";
 
 const queryClient = new QueryClient({
@@ -31,8 +30,8 @@ function App() {
               element={<Navigate to="/employee/dashboard" replace />}
             ></Route>
             <Route path="dashboard" element={<EmployeeDashboard />} />
-            <Route path="check-in" element={<EmployeeCheckIn />} />
-            <Route path="check-out" element={<EmployeeCheckOut />} />
+            <Route path="check-in" element={<AttendanceAction mode="in" />} />
+            <Route path="check-out" element={<AttendanceAction mode="out" />} />
             <Route path="profile" element={<EmployeeProfile />} />
           </Route>
 
