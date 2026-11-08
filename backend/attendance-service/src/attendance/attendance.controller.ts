@@ -1,0 +1,53 @@
+import { Controller } from "@nestjs/common";
+import { MessagePattern, Payload } from "@nestjs/microservices";
+import { AttendanceService } from "./attendance.service";
+
+@Controller()
+export class AttendanceController {
+  constructor(private readonly attendanceService: AttendanceService) {}
+
+  @MessagePattern("attendance.check_in")
+  async checkIn(
+    @Payload() payload: { employeeId: number; photo: string; note?: string },
+  ) {
+    return this.attendanceService.checkIn(payload);
+  }
+
+  @MessagePattern("attendance.check_out")
+  async checkOut(
+    @Payload() payload: { employeeId: number; photo: string; note?: string },
+  ) {
+    return this.attendanceService.checkOut(payload);
+  }
+
+  @MessagePattern("attendance.get_today")
+  async getToday(@Payload() payload: { employeeId: number }) {
+    return this.attendanceService.getToday(payload.employeeId);
+  }
+
+  @MessagePattern("attendance.get_my_history")
+  async getMyHistory(
+    @Payload()
+    payload: {
+      employeeId: number;
+      month?: string;
+      status?: any;
+    },
+  ) {
+    return this.attendanceService.getMyHistory(payload.employeeId, {
+      month: payload.month,
+      status: payload.status,
+    });
+  }
+
+  @MessagePattern("attendance.get_all")
+  async getAll(@Payload() query: any) {
+    return this.attendanceService.getAll(query || {});
+  }
+
+  @MessagePattern("attendance.get_summary")
+  async getSummary(@Payload() payload: { date?: string }) {
+    return this.attendanceService.getSummary(payload?.date);
+  }
+}
+
