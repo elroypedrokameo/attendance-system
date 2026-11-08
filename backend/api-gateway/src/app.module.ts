@@ -10,6 +10,7 @@ import { R2StorageService } from "./storage/r2-storage.service";
 import { AuthController } from "./auth/auth.controller";
 import { EmployeeController } from "./employee/employee.controller";
 import { AttendanceController } from "./attendance/attendance.controller";
+import { StorageController } from "./storage/storage.controller";
 
 @Module({
   imports: [
@@ -54,7 +55,12 @@ import { AttendanceController } from "./attendance/attendance.controller";
       },
     ]),
   ],
-  controllers: [AuthController, EmployeeController, AttendanceController],
+  controllers: [
+    AuthController,
+    EmployeeController,
+    AttendanceController,
+    StorageController,
+  ],
   providers: [JwtStrategy, JwtAuthGuard, RolesGuard, R2StorageService],
 })
 export class AppModule {}

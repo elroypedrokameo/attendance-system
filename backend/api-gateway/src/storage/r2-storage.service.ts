@@ -4,8 +4,13 @@ import {
   Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import { extname } from "path";
+import { Readable } from "stream";
 
 @Injectable()
 export class R2StorageService {
@@ -72,7 +77,39 @@ export class R2StorageService {
       }),
     );
 
-    return `${this.publicUrl}/${key}`;
+    // If a custom domain is configured (not the blocked r2.dev subdomain), use it
+    if (this.publicUrl && !this.publicUrl.includes("r2.dev")) {
+      return `${this.publicUrl}/${key}`;
+    }
+
+    // Default: use the gateway storage proxy route so it bypasses ISP blocks
+    return `/api/storage/${key}`;
+  }
+
+  async getFile(
+    key: string,
+  ): Promise<{
+    stream: Readable;
+    contentType: string;
+    contentLength?: number;
+  }> {
+    if (!this.s3Client || !this.bucketName) {
+      throw new InternalServerErrorException(
+        "Cloudflare R2 Storage is not properly configured.",
+      );
+    }
+
+    const response = await this.s3Client.send(
+      new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }),
+    );
+
+    return {
+      stream: response.Body as unknown as Readable,
+      contentType: response.ContentType || "image/jpeg",
+      contentLength: response.ContentLength,
+    };
   }
 }
-

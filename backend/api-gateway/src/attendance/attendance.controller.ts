@@ -45,6 +45,19 @@ const multerOptions = {
   },
 };
 
+function normalizeAttendanceRecord(item: any) {
+  if (!item) return item;
+  const normalize = (url: string | null) => {
+    if (!url) return null;
+    return url.replace(/^https:\/\/pub-[^/]+\.r2\.dev\//, "/api/storage/");
+  };
+  return {
+    ...item,
+    checkInPhoto: normalize(item.checkInPhoto),
+    checkOutPhoto: normalize(item.checkOutPhoto),
+  };
+}
+
 @ApiTags("Attendance")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -104,7 +117,7 @@ export class AttendanceController {
       throw new BadRequestException(result.message);
     }
 
-    return result;
+    return { ...result, data: normalizeAttendanceRecord(result.data) };
   }
 
   @Post("check-out")
@@ -153,7 +166,7 @@ export class AttendanceController {
       throw new BadRequestException(result.message);
     }
 
-    return result;
+    return { ...result, data: normalizeAttendanceRecord(result.data) };
   }
 
   @Get("today")
@@ -166,11 +179,17 @@ export class AttendanceController {
       return { success: true, data: null };
     }
 
-    return lastValueFrom(
+    const res = await lastValueFrom(
       this.attendanceServiceClient.send("attendance.get_today", {
         employeeId: user.employeeId,
       }),
     );
+
+    if (res?.data) {
+      res.data = normalizeAttendanceRecord(res.data);
+    }
+
+    return res;
   }
 
   @Get("history")
@@ -183,13 +202,19 @@ export class AttendanceController {
       return { success: true, data: [] };
     }
 
-    return lastValueFrom(
+    const res = await lastValueFrom(
       this.attendanceServiceClient.send("attendance.get_my_history", {
         employeeId: user.employeeId,
         month: query.month,
         status: query.status,
       }),
     );
+
+    if (Array.isArray(res?.data)) {
+      res.data = res.data.map(normalizeAttendanceRecord);
+    }
+
+    return res;
   }
 
   @Get()
@@ -230,9 +255,10 @@ export class AttendanceController {
     }
 
     const mergedData = attendanceRes.data.map((item: any) => {
+      const normalized = normalizeAttendanceRecord(item);
       const emp = employeeMap.get(item.employeeId);
       return {
-        ...item,
+        ...normalized,
         employeeName: emp?.name || "-",
         employeeCode: emp?.employeeCode || "-",
         department: emp?.department?.name || "-",
