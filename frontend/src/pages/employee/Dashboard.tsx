@@ -4,22 +4,22 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { LiveClock } from "@/components/ui/LiveClock";
 import { Select } from "@/components/ui/Select";
-import { CalendarCheck, Camera, CheckCircle2, Eye, X } from "lucide-react";
+import {
+  CalendarCheck,
+  Camera,
+  CheckCircle2,
+  Eye,
+  X,
+  Loader2,
+} from "lucide-react";
 import dayjs from "dayjs";
-
-type HistoryStatus = "ON_TIME" | "LATE" | "LEAVE" | "SICK" | "ABSENT";
-
-type HistoryData = {
-  id: number;
-  date: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  status: HistoryStatus;
-  checkInNote: string;
-  checkInPhoto?: string | null;
-  checkOutNote?: string | null;
-  checkOutPhoto?: string | null;
-};
+import { useAuth } from "@/context/AuthContext";
+import {
+  useTodayAttendance,
+  useAttendanceHistory,
+  type AttendanceStatus,
+  type AttendanceRecord,
+} from "@/hooks/useAttendance";
 
 const monthOptions = [
   { value: "", label: "All Months" },
@@ -41,7 +41,7 @@ const statusOptions = [
   { value: "ABSENT", label: "Absent" },
 ];
 
-const getStatusLabel = (status: HistoryStatus) => {
+const getStatusLabel = (status: AttendanceStatus) => {
   switch (status) {
     case "ON_TIME":
       return "On Time";
@@ -59,6 +59,7 @@ const getStatusLabel = (status: HistoryStatus) => {
 };
 
 const Dashboard = () => {
+  const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState<string>(() =>
     dayjs().format("MM"),
   );
@@ -68,94 +69,14 @@ const Dashboard = () => {
     title: string;
   } | null>(null);
 
-  const historyData: HistoryData[] = [
-    {
-      id: 1,
-      date: "2026-11-01",
-      checkInTime: "2026-11-01T08:45:00",
-      checkOutTime: "2026-11-01T17:15:00",
-      status: "ON_TIME",
-      checkInNote: "Planning sprint tasks A, B, and C for project X.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-      checkOutNote:
-        "Completed tasks A, B, and C and pushed PR for code review.",
-      checkOutPhoto:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-    },
-    {
-      id: 2,
-      date: "2026-11-02",
-      checkInTime: "2026-11-02T09:15:00",
-      checkOutTime: "2026-11-02T17:30:00",
-      status: "LATE",
-      checkInNote: "Traffic delay before switching to remote work.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-      checkOutNote:
-        "Wrapped up API integration and unit tests for auth module.",
-      checkOutPhoto:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-    },
-    {
-      id: 3,
-      date: "2026-11-03",
-      checkInTime: null,
-      checkOutTime: null,
-      status: "LEAVE",
-      checkInNote: "Annual leave",
-      checkInPhoto: null,
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-    {
-      id: 4,
-      date: "2026-11-04",
-      checkInTime: null,
-      checkOutTime: null,
-      status: "SICK",
-      checkInNote: "Medical leave",
-      checkInPhoto: null,
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-    {
-      id: 5,
-      date: "2026-11-05",
-      checkInTime: null,
-      checkOutTime: null,
-      status: "ABSENT",
-      checkInNote: "",
-      checkInPhoto: null,
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-    {
-      id: 6,
-      date: "2026-11-07",
-      checkInTime: "2026-11-07T08:50:00",
-      checkOutTime: null,
-      status: "ON_TIME",
-      checkInNote:
-        "Working on attendance dashboard features and camera capture verification.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-  ];
+  const { data: todayAttendance, isLoading: isTodayLoading } =
+    useTodayAttendance();
 
-  const todayDate = dayjs().format("YYYY-MM-DD");
-  const todayAttendance = historyData.find((item) => item.date === todayDate);
-
-  const filteredData = historyData
-    .filter((item) => {
-      const matchMonth =
-        !selectedMonth || dayjs(item.date).format("MM") === selectedMonth;
-      const matchStatus = !selectedStatus || item.status === selectedStatus;
-      return matchMonth && matchStatus;
-    })
-    .sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
+  const { data: historyData = [], isLoading: isHistoryLoading } =
+    useAttendanceHistory({
+      month: selectedMonth,
+      status: selectedStatus,
+    });
 
   return (
     <div className="space-y-6">
@@ -165,9 +86,11 @@ const Dashboard = () => {
             <span className="text-xs font-medium uppercase tracking-wider text-zinc-900 bg-zinc-100 px-2.5 py-1 rounded-md border border-zinc-200">
               Welcome Back,
             </span>
-            <h2 className="text-xl font-bold text-zinc-900 mt-2">Elroy</h2>
+            <h2 className="text-xl font-bold text-zinc-900 mt-2">
+              {user?.name || "Employee"}
+            </h2>
             <p className="text-sm text-zinc-500 mt-0.5">
-              Software Engineer • IT Department
+              {user?.position || "Staff"} • {user?.department || "Dexa"}
             </p>
           </div>
           <p className="text-xs text-zinc-500 mt-4">
@@ -321,7 +244,9 @@ const Dashboard = () => {
           </p>
 
           <div>
-            {!todayAttendance?.checkInTime ? (
+            {isTodayLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-zinc-400" />
+            ) : !todayAttendance?.checkInTime ? (
               <Link to="/employee/check-in">
                 <Button icon={<Camera className="w-4 h-4" />}>
                   Check In Now
@@ -361,8 +286,12 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {filteredData && filteredData.length > 0 ? (
-          filteredData.map((item: HistoryData) => (
+        {isHistoryLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+          </div>
+        ) : historyData && historyData.length > 0 ? (
+          historyData.map((item: AttendanceRecord) => (
             <div
               key={item.id}
               className="bg-white p-6 rounded-xl border border-zinc-200 shadow-xs mt-4"

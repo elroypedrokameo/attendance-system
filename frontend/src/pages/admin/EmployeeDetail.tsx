@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
-import { INITIAL_EMPLOYEES, DEPARTMENTS } from "@/pages/admin/EmployeeList";
 import {
   ArrowLeft,
   Mail,
@@ -13,23 +12,14 @@ import {
   Calendar,
   Eye,
   X,
+  Loader2,
 } from "lucide-react";
 import dayjs from "dayjs";
-
-type AttendanceStatus = "ON_TIME" | "LATE" | "LEAVE" | "SICK" | "ABSENT";
-
-interface EmployeeAttendanceRecord {
-  id: number;
-  employeeId: number;
-  date: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  status: AttendanceStatus;
-  checkInNote: string;
-  checkInPhoto?: string | null;
-  checkOutNote?: string | null;
-  checkOutPhoto?: string | null;
-}
+import { useEmployeeDetail } from "@/hooks/useEmployees";
+import {
+  useAdminAttendances,
+  type AttendanceStatus,
+} from "@/hooks/useAttendance";
 
 const monthOptions = [
   { value: "", label: "All Months" },
@@ -68,129 +58,6 @@ const getStatusLabel = (status: AttendanceStatus) => {
   }
 };
 
-const EMPLOYEE_ATTENDANCE_DATA: EmployeeAttendanceRecord[] = [
-  {
-    id: 1,
-    employeeId: 1,
-    date: "2026-11-07",
-    checkInTime: "2026-11-07T08:50:00",
-    checkOutTime: null,
-    status: "ON_TIME",
-    checkInNote:
-      "Working on attendance dashboard features and camera capture verification.",
-    checkInPhoto:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-  {
-    id: 2,
-    employeeId: 1,
-    date: "2026-11-05",
-    checkInTime: null,
-    checkOutTime: null,
-    status: "ABSENT",
-    checkInNote: "",
-    checkInPhoto: null,
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-  {
-    id: 3,
-    employeeId: 1,
-    date: "2026-11-04",
-    checkInTime: null,
-    checkOutTime: null,
-    status: "SICK",
-    checkInNote: "Medical leave",
-    checkInPhoto: null,
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-  {
-    id: 4,
-    employeeId: 1,
-    date: "2026-11-03",
-    checkInTime: null,
-    checkOutTime: null,
-    status: "LEAVE",
-    checkInNote: "Annual leave",
-    checkInPhoto: null,
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-  {
-    id: 5,
-    employeeId: 1,
-    date: "2026-11-02",
-    checkInTime: "2026-11-02T09:20:00",
-    checkOutTime: "2026-11-02T17:30:00",
-    status: "LATE",
-    checkInNote: "Traffic delay before switching to remote work.",
-    checkInPhoto:
-      "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-    checkOutNote: "Wrapped up API integration and unit tests for auth module.",
-    checkOutPhoto:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 6,
-    employeeId: 1,
-    date: "2026-11-01",
-    checkInTime: "2026-11-01T08:45:00",
-    checkOutTime: "2026-11-01T17:15:00",
-    status: "ON_TIME",
-    checkInNote: "Planning sprint tasks A, B, and C for project X.",
-    checkInPhoto:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-    checkOutNote: "Completed tasks A, B, and C and pushed PR for code review.",
-    checkOutPhoto:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 7,
-    employeeId: 2,
-    date: "2026-11-07",
-    checkInTime: "2026-11-07T08:58:00",
-    checkOutTime: "2026-11-07T17:32:00",
-    status: "ON_TIME",
-    checkInNote:
-      "Starting design system token audit and mobile responsive wireframes.",
-    checkInPhoto:
-      "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-    checkOutNote:
-      "Completed mobile wireframes and handed off Figma specs to frontend.",
-    checkOutPhoto:
-      "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-  },
-  {
-    id: 8,
-    employeeId: 3,
-    date: "2026-11-07",
-    checkInTime: "2026-11-07T09:24:00",
-    checkOutTime: null,
-    status: "LATE",
-    checkInNote:
-      "ISP outage in the morning, switched to mobile tethering for WFH.",
-    checkInPhoto:
-      "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-  {
-    id: 9,
-    employeeId: 4,
-    date: "2026-11-07",
-    checkInTime: null,
-    checkOutTime: null,
-    status: "LEAVE",
-    checkInNote: "Scheduled annual family leave.",
-    checkInPhoto: null,
-    checkOutNote: null,
-    checkOutPhoto: null,
-  },
-];
-
 export const EmployeeDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -205,20 +72,29 @@ export const EmployeeDetail: React.FC = () => {
   } | null>(null);
 
   const employeeId = Number(id);
-  const employee =
-    INITIAL_EMPLOYEES.find((emp) => emp.id === employeeId) ||
-    INITIAL_EMPLOYEES[0];
 
-  const departmentName =
-    DEPARTMENTS.find((d) => d.id === employee.departmentId)?.name || "-";
+  const { data: employee, isLoading: isEmployeeLoading } =
+    useEmployeeDetail(employeeId);
 
-  const filteredRecords = EMPLOYEE_ATTENDANCE_DATA.filter((item) => {
-    const matchEmployee = item.employeeId === employee.id;
-    const matchMonth =
-      !selectedMonth || dayjs(item.date).format("MM") === selectedMonth;
-    const matchStatus = !selectedStatus || item.status === selectedStatus;
-    return matchEmployee && matchMonth && matchStatus;
-  }).sort((a, b) => dayjs(b.date).valueOf() - dayjs(a.date).valueOf());
+  const { data: records = [], isLoading: isRecordsLoading } =
+    useAdminAttendances(
+      {
+        employeeId,
+        month: selectedMonth,
+        status: selectedStatus,
+      },
+      Boolean(employeeId),
+    );
+
+  if (isEmployeeLoading || !employee) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  const departmentName = employee.department?.name || "-";
 
   return (
     <div className="space-y-6">
@@ -343,8 +219,12 @@ export const EmployeeDetail: React.FC = () => {
           </div>
         </div>
 
-        {filteredRecords.length > 0 ? (
-          filteredRecords.map((item) => (
+        {isRecordsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+          </div>
+        ) : records.length > 0 ? (
+          records.map((item) => (
             <div
               key={item.id}
               className="bg-white p-6 rounded-xl border border-zinc-200 shadow-xs mt-4"

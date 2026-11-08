@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
-import { AlertCircle, Camera, ShieldCheck } from "lucide-react";
+import { AlertCircle, Camera } from "lucide-react";
 import { CameraCapture } from "@/components/ui/CameraCapture";
 import { sanitizeInput } from "@/utils/sanitize";
+import { useSubmitAttendance } from "@/hooks/useAttendance";
 
 interface AttendanceActionProps {
   mode?: "in" | "out";
@@ -12,9 +13,13 @@ interface AttendanceActionProps {
 
 export const AttendanceAction: React.FC<AttendanceActionProps> = ({ mode }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+
   const isCheckOut = mode
     ? mode === "out"
     : location.pathname.includes("check-out");
+
+  const submitAttendance = useSubmitAttendance(isCheckOut ? "out" : "in");
 
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -36,13 +41,30 @@ export const AttendanceAction: React.FC<AttendanceActionProps> = ({ mode }) => {
     setNote(sanitizeInput(e.target.value));
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const cleanNote = sanitizeInput(note);
-    console.log(
-      `Submitting ${isCheckOut ? "check-out" : "check-in"} with sanitized note:`,
-      cleanNote,
-    );
+    if (!photo) {
+      setError("Please capture or upload a WFH photo proof first.");
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const cleanNote = sanitizeInput(note).trim();
+      await submitAttendance.mutateAsync({
+        photo,
+        note: cleanNote || undefined,
+      });
+
+      navigate("/employee/dashboard", { replace: true });
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "An error occurred while submitting attendance.",
+      );
+    }
   };
 
   const config = {
@@ -112,8 +134,8 @@ export const AttendanceAction: React.FC<AttendanceActionProps> = ({ mode }) => {
                 type="submit"
                 variant="primary"
                 className="w-full"
-                disabled={!photo}
-                isLoading={false}
+                disabled={!photo || submitAttendance.isPending}
+                isLoading={submitAttendance.isPending}
                 icon={<Camera className="w-4 h-4" />}
               >
                 {config.buttonText}

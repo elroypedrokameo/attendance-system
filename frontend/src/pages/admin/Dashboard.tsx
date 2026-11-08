@@ -13,26 +13,15 @@ import {
   Eye,
   X,
   Search,
+  Loader2,
 } from "lucide-react";
 import dayjs from "dayjs";
-
-type AttendanceStatus = "ON_TIME" | "LATE" | "LEAVE" | "SICK" | "ABSENT";
-
-type TodayAttendanceRecord = {
-  id: number;
-  employeeName: string;
-  employeeCode: string;
-  department: string;
-  position: string;
-  date: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  status: AttendanceStatus;
-  checkInNote: string;
-  checkInPhoto?: string | null;
-  checkOutNote?: string | null;
-  checkOutPhoto?: string | null;
-};
+import {
+  useAttendanceSummary,
+  useAdminAttendances,
+  type AttendanceStatus,
+  type SummaryMetrics,
+} from "@/hooks/useAttendance";
 
 const statusOptions = [
   { value: "", label: "All Statuses" },
@@ -70,83 +59,19 @@ const Dashboard = () => {
 
   const todayDate = dayjs().format("YYYY-MM-DD");
 
-  const todayRecords: TodayAttendanceRecord[] = [
-    {
-      id: 1,
-      employeeName: "Elroy Kameo",
-      employeeCode: "EMP-2026-001",
-      department: "IT Department",
-      position: "Software Engineer",
-      date: todayDate,
-      checkInTime: `${todayDate}T08:50:00`,
-      checkOutTime: null,
-      status: "ON_TIME",
-      checkInNote:
-        "Working on attendance dashboard features and camera capture verification.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-    {
-      id: 2,
-      employeeName: "Sarah Wijaya",
-      employeeCode: "EMP-2026-002",
-      department: "Product Design",
-      position: "UI/UX Designer",
-      date: todayDate,
-      checkInTime: `${todayDate}T08:58:00`,
-      checkOutTime: `${todayDate}T17:32:00`,
-      status: "ON_TIME",
-      checkInNote:
-        "Starting design system token audit and mobile responsive wireframes.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
-      checkOutNote:
-        "Completed mobile wireframes and handed off Figma specs to frontend.",
-      checkOutPhoto:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
-    },
-    {
-      id: 3,
-      employeeName: "Budi Santoso",
-      employeeCode: "EMP-2026-003",
-      department: "IT Department",
-      position: "Backend Engineer",
-      date: todayDate,
-      checkInTime: `${todayDate}T09:24:00`,
-      checkOutTime: null,
-      status: "LATE",
-      checkInNote:
-        "ISP outage in the morning, switched to mobile tethering for WFH.",
-      checkInPhoto:
-        "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80",
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-    {
-      id: 4,
-      employeeName: "Amanda Putri",
-      employeeCode: "EMP-2026-004",
-      department: "Human Resources",
-      position: "HR Specialist",
-      date: todayDate,
-      checkInTime: null,
-      checkOutTime: null,
-      status: "LEAVE",
-      checkInNote: "Scheduled annual family leave.",
-      checkInPhoto: null,
-      checkOutNote: null,
-      checkOutPhoto: null,
-    },
-  ];
+  const { data: summaryData } = useAttendanceSummary(todayDate);
 
-  const summary = {
-    totalActiveEmployees: 24,
-    totalAttended: 18,
-    totalOnTime: 15,
-    totalLate: 3,
-    totalNotAttended: 6,
+  const { data: todayRecords = [], isLoading } = useAdminAttendances({
+    date: todayDate,
+    status: selectedStatus,
+  });
+
+  const summary: SummaryMetrics = summaryData || {
+    totalActiveEmployees: 0,
+    totalAttended: 0,
+    totalOnTime: 0,
+    totalLate: 0,
+    totalNotAttended: 0,
   };
 
   const filteredRecords = todayRecords.filter((item) => {
@@ -260,7 +185,11 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {filteredRecords.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
+          </div>
+        ) : filteredRecords.length > 0 ? (
           filteredRecords.map((item) => (
             <div
               key={item.id}

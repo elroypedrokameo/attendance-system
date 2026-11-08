@@ -6,25 +6,26 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { sanitizeInput } from "@/utils/sanitize";
-import { Plus, Edit2, UserX, AlertCircle, Search } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  UserX,
+  AlertCircle,
+  Search,
+  Loader2,
+} from "lucide-react";
 import dayjs from "dayjs";
+import {
+  useDepartments,
+  useEmployees,
+  useCreateEmployee,
+  useUpdateEmployee,
+  useDeactivateEmployee,
+  type Department,
+  type EmployeeRecord,
+} from "@/hooks/useEmployees";
 
-export interface Department {
-  id: number;
-  name: string;
-}
-
-export interface EmployeeRecord {
-  id: number;
-  employeeCode: string;
-  name: string;
-  email: string;
-  phone: string;
-  departmentId: number;
-  position: string;
-  joinDate: string;
-  isActive: number;
-}
+export type { Department, EmployeeRecord };
 
 interface EmployeeFormData {
   id?: number;
@@ -38,76 +39,9 @@ interface EmployeeFormData {
   password?: string;
 }
 
-export const DEPARTMENTS: Department[] = [
-  { id: 1, name: "IT Department" },
-  { id: 2, name: "Product Design" },
-  { id: 3, name: "Human Resources" },
-  { id: 4, name: "Finance & Accounting" },
-  { id: 5, name: "Operations" },
-];
-
-export const INITIAL_EMPLOYEES: EmployeeRecord[] = [
-  {
-    id: 1,
-    employeeCode: "EMP-2026-001",
-    name: "Elroy Kameo",
-    email: "elroy@dexa.com",
-    phone: "0827284623",
-    departmentId: 1,
-    position: "Software Engineer",
-    joinDate: "2022-01-15",
-    isActive: 1,
-  },
-  {
-    id: 2,
-    employeeCode: "EMP-2026-002",
-    name: "Sarah Wijaya",
-    email: "sarah.wijaya@dexa.com",
-    phone: "08129876543",
-    departmentId: 2,
-    position: "UI/UX Designer",
-    joinDate: "2023-03-10",
-    isActive: 1,
-  },
-  {
-    id: 3,
-    employeeCode: "EMP-2026-003",
-    name: "Budi Santoso",
-    email: "budi.santoso@dexa.com",
-    phone: "08134567890",
-    departmentId: 1,
-    position: "Backend Engineer",
-    joinDate: "2022-08-01",
-    isActive: 1,
-  },
-  {
-    id: 4,
-    employeeCode: "EMP-2026-004",
-    name: "Amanda Putri",
-    email: "amanda.putri@dexa.com",
-    phone: "08561234567",
-    departmentId: 3,
-    position: "HR Specialist",
-    joinDate: "2021-11-20",
-    isActive: 1,
-  },
-  {
-    id: 5,
-    employeeCode: "EMP-2026-005",
-    name: "Kevin Pratama",
-    email: "kevin.pratama@dexa.com",
-    phone: "08198765432",
-    departmentId: 4,
-    position: "Financial Analyst",
-    joinDate: "2021-05-12",
-    isActive: 0,
-  },
-];
-
 export const EmployeeList: React.FC = () => {
   const navigate = useNavigate();
-  const [employees, setEmployees] =
-    useState<EmployeeRecord[]>(INITIAL_EMPLOYEES);
+
   const [search, setSearch] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [isActive, setIsActive] = useState("");
@@ -127,28 +61,28 @@ export const EmployeeList: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [deactivateId, setDeactivateId] = useState<number | null>(null);
 
-  const departmentOptions = DEPARTMENTS.map((d) => ({
+  const { data: departments = [] } = useDepartments();
+  const { data: employees = [], isLoading } = useEmployees({
+    search,
+    departmentId,
+    isActive,
+  });
+
+  const createEmployee = useCreateEmployee();
+  const updateEmployee = useUpdateEmployee();
+  const deactivateEmployee = useDeactivateEmployee();
+
+  const isSubmitting = createEmployee.isPending || updateEmployee.isPending;
+
+  const departmentOptions = departments.map((d) => ({
     value: String(d.id),
     label: d.name,
   }));
 
-  const getDepartmentName = (id: number) =>
-    DEPARTMENTS.find((d) => d.id === id)?.name || "-";
-
-  const filteredEmployees = employees.filter((emp) => {
-    const query = search.trim().toLowerCase();
-    const matchSearch =
-      !query ||
-      emp.name.toLowerCase().includes(query) ||
-      emp.employeeCode.toLowerCase().includes(query) ||
-      emp.email.toLowerCase().includes(query) ||
-      emp.position.toLowerCase().includes(query);
-    const matchDept =
-      !departmentId || String(emp.departmentId) === String(departmentId);
-    const matchStatus =
-      isActive === "" || String(emp.isActive) === String(isActive);
-    return matchSearch && matchDept && matchStatus;
-  });
+  const getDepartmentName = (emp: EmployeeRecord) =>
+    emp.department?.name ||
+    departments.find((d) => d.id === emp.departmentId)?.name ||
+    "-";
 
   const resetForm = () => {
     setFormData({
@@ -156,7 +90,7 @@ export const EmployeeList: React.FC = () => {
       name: "",
       email: "",
       phone: "",
-      departmentId: DEPARTMENTS[0].id,
+      departmentId: departments[0]?.id || 1,
       position: "",
       joinDate: dayjs().format("YYYY-MM-DD"),
       password: "",
@@ -186,7 +120,7 @@ export const EmployeeList: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -206,57 +140,49 @@ export const EmployeeList: React.FC = () => {
       return;
     }
 
-    if (isEditing && formData.id) {
-      setEmployees((prev) =>
-        prev.map((emp) =>
-          emp.id === formData.id
-            ? {
-                ...emp,
-                name: cleanName,
-                email: cleanEmail,
-                phone: cleanPhone,
-                departmentId: Number(formData.departmentId),
-                position: cleanPosition,
-                joinDate: formData.joinDate,
-              }
-            : emp,
-        ),
-      );
-    } else {
-      const codeExists = employees.some(
-        (emp) => emp.employeeCode.toLowerCase() === cleanCode.toLowerCase(),
-      );
-      if (codeExists) {
-        setFormError("Employee code already exists.");
-        return;
+    try {
+      if (isEditing && formData.id) {
+        await updateEmployee.mutateAsync({
+          id: formData.id,
+          data: {
+            name: cleanName,
+            email: cleanEmail,
+            phone: cleanPhone,
+            departmentId: Number(formData.departmentId),
+            position: cleanPosition,
+            joinDate: formData.joinDate,
+          },
+        });
+      } else {
+        await createEmployee.mutateAsync({
+          employeeCode: cleanCode,
+          name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          departmentId: Number(formData.departmentId),
+          position: cleanPosition,
+          joinDate: formData.joinDate,
+          password: formData.password,
+        });
       }
 
-      const newEmployee: EmployeeRecord = {
-        id: Date.now(),
-        employeeCode: cleanCode,
-        name: cleanName,
-        email: cleanEmail,
-        phone: cleanPhone,
-        departmentId: Number(formData.departmentId),
-        position: cleanPosition,
-        joinDate: formData.joinDate,
-        isActive: 1,
-      };
-      setEmployees((prev) => [newEmployee, ...prev]);
+      setIsModalOpen(false);
+      resetForm();
+    } catch (err: any) {
+      setFormError(
+        err.response?.data?.message || "Failed to save employee record.",
+      );
     }
-
-    setIsModalOpen(false);
-    resetForm();
   };
 
-  const handleDeactivate = () => {
+  const handleDeactivate = async () => {
     if (deactivateId === null) return;
-    setEmployees((prev) =>
-      prev.map((emp) =>
-        emp.id === deactivateId ? { ...emp, isActive: 0 } : emp,
-      ),
-    );
-    setDeactivateId(null);
+    try {
+      await deactivateEmployee.mutateAsync(deactivateId);
+      setDeactivateId(null);
+    } catch {
+      setDeactivateId(null);
+    }
   };
 
   return (
@@ -333,8 +259,14 @@ export const EmployeeList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {filteredEmployees.length > 0 ? (
-                filteredEmployees.map((emp) => (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-8 text-center">
+                    <Loader2 className="w-5 h-5 animate-spin text-zinc-400 mx-auto" />
+                  </td>
+                </tr>
+              ) : employees.length > 0 ? (
+                employees.map((emp) => (
                   <tr
                     key={emp.id}
                     onClick={() => navigate(`/admin/employees/${emp.id}`)}
@@ -351,7 +283,7 @@ export const EmployeeList: React.FC = () => {
                       )}
                     </td>
                     <td className="px-5 py-4 text-xs text-zinc-700">
-                      {getDepartmentName(emp.departmentId)}
+                      {getDepartmentName(emp)}
                     </td>
                     <td className="px-5 py-4 text-xs font-medium text-zinc-800">
                       {emp.position}
@@ -524,7 +456,7 @@ export const EmployeeList: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" isLoading={isSubmitting}>
               {isEditing ? "Save Changes" : "Add Employee"}
             </Button>
           </div>
@@ -551,7 +483,12 @@ export const EmployeeList: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button type="button" variant="danger" onClick={handleDeactivate}>
+            <Button
+              type="button"
+              variant="danger"
+              isLoading={deactivateEmployee.isPending}
+              onClick={handleDeactivate}
+            >
               Yes, Deactivate
             </Button>
           </div>
