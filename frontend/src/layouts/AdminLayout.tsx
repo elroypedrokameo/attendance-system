@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Outlet, NavLink, Link } from "react-router-dom";
+import { Outlet, NavLink, Link, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -7,13 +7,17 @@ import {
   LogOut,
   ChevronDown,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export const AdminLayout = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
-    console.log("Logout...");
+    logout();
+    navigate("/login", { replace: true });
   };
 
   useEffect(() => {
@@ -41,6 +45,8 @@ export const AdminLayout = () => {
       icon: <Users className="w-4 h-4" />,
     },
   ];
+
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : "A";
 
   return (
     <div className="min-h-screen bg-zinc-50 flex flex-col">
@@ -85,7 +91,7 @@ export const AdminLayout = () => {
               aria-haspopup="true"
             >
               <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center font-semibold text-xs shrink-0">
-                E
+                {initial}
               </div>
               <ChevronDown
                 className={`w-4 h-4 text-zinc-400 transition-transform duration-200 hidden sm:block ${
@@ -97,9 +103,11 @@ export const AdminLayout = () => {
             {isProfileOpen && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl border border-zinc-200 shadow-lg py-1.5 z-50">
                 <div className="px-4 py-2.5 border-b border-zinc-100">
-                  <p className="text-sm font-semibold text-zinc-900">Elroy</p>
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {user?.name || "Admin"}
+                  </p>
                   <p className="text-xs text-zinc-500 truncate">
-                    HR Administrator
+                    {user?.position || "HR Administrator"}
                   </p>
                 </div>
 
