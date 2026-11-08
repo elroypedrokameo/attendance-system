@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
-import dayjs from "dayjs";
 import { Attendance, AttendanceStatus } from "../entities/attendance.entity";
 
 @Injectable()
@@ -13,10 +12,59 @@ export class AttendanceService {
     private readonly configService: ConfigService,
   ) {}
 
+  private async getAuthoritativeNow(): Promise<Date> {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1500);
+      const res = await fetch("http://cloudflare.com/cdn-cgi/trace", {
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        const text = await res.text();
+        const match = text.match(/^ts=(\d+(?:\.\d+)?)/m);
+        if (match) {
+          const epochMs = Math.round(parseFloat(match[1]) * 1000);
+          if (!Number.isNaN(epochMs) && epochMs > 0) {
+            return new Date(epochMs);
+          }
+        }
+      }
+    } catch {
+      // Fallback to server system clock if external network trace is unreachable
+    }
+    return new Date();
+  }
+
+  private getWibParts(date: Date): { dateStr: string; timeStr: string } {
+    // WIB (Asia/Jakarta) is permanently UTC+7
+    const wibDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+    const iso = wibDate.toISOString();
+    return {
+      dateStr: iso.slice(0, 10),
+      timeStr: iso.slice(11, 16),
+    };
+  }
+
+  async getServerTime() {
+    const now = await this.getAuthoritativeNow();
+    const { dateStr, timeStr } = this.getWibParts(now);
+    return {
+      success: true,
+      data: {
+        timestamp: now.getTime(),
+        iso: now.toISOString(),
+        date: dateStr,
+        time: timeStr,
+        timezone: "Asia/Jakarta",
+      },
+    };
+  }
+
   async checkIn(payload: { employeeId: number; photo: string; note?: string }) {
     const { employeeId, photo, note } = payload;
-    const now = new Date();
-    const today = dayjs(now).format("YYYY-MM-DD");
+    const now = await this.getAuthoritativeNow();
+    const { dateStr: today, timeStr: currentTimeStr } = this.getWibParts(now);
 
     const existing = await this.attendanceRepository.findOne({
       where: { employeeId, date: today },
@@ -33,7 +81,6 @@ export class AttendanceService {
       "WORK_START_TIME",
       "09:15",
     );
-    const currentTimeStr = dayjs(now).format("HH:mm");
     const status =
       currentTimeStr > workStartTime
         ? AttendanceStatus.LATE
@@ -66,8 +113,8 @@ export class AttendanceService {
     note?: string;
   }) {
     const { employeeId, photo, note } = payload;
-    const now = new Date();
-    const today = dayjs(now).format("YYYY-MM-DD");
+    const now = await this.getAuthoritativeNow();
+    const { dateStr: today } = this.getWibParts(now);
 
     const attendance = await this.attendanceRepository.findOne({
       where: { employeeId, date: today },
@@ -101,7 +148,8 @@ export class AttendanceService {
   }
 
   async getToday(employeeId: number) {
-    const today = dayjs().format("YYYY-MM-DD");
+    const now = await this.getAuthoritativeNow();
+    const { dateStr: today } = this.getWibParts(now);
     const attendance = await this.attendanceRepository.findOne({
       where: { employeeId, date: today },
     });
@@ -157,7 +205,11 @@ export class AttendanceService {
       .addOrderBy("att.checkInTime", "DESC");
 
     if (query.date) {
-      queryBuilder.andWhere("att.date = :date", { date: query.date });
+      const targetDate =
+        query.date === "today"
+          ? this.getWibParts(await this.getAuthoritativeNow()).dateStr
+          : query.date;
+      queryBuilder.andWhere("att.date = :date", { date: targetDate });
     }
 
     if (query.month) {
@@ -194,7 +246,11 @@ export class AttendanceService {
   }
 
   async getSummary(date?: string) {
-    const targetDate = date || dayjs().format("YYYY-MM-DD");
+    let targetDate = date;
+    if (!targetDate || targetDate === "today") {
+      const now = await this.getAuthoritativeNow();
+      targetDate = this.getWibParts(now).dateStr;
+    }
 
     const attendances = await this.attendanceRepository.find({
       where: { date: targetDate },

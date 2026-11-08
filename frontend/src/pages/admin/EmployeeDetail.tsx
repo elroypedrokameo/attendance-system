@@ -18,6 +18,7 @@ import dayjs from "dayjs";
 import { useEmployeeDetail } from "@/hooks/useEmployees";
 import {
   useAdminAttendances,
+  formatWibTime,
   type AttendanceStatus,
 } from "@/hooks/useAttendance";
 
@@ -252,7 +253,7 @@ export const EmployeeDetail: React.FC = () => {
                   <p className="text-sm text-zinc-600">Check In</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkInTime
-                      ? `${dayjs(item.checkInTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkInTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">
@@ -263,7 +264,7 @@ export const EmployeeDetail: React.FC = () => {
                   <p className="text-sm text-zinc-600">Check Out</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkOutTime
-                      ? `${dayjs(item.checkOutTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkOutTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">

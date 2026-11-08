@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   useTodayAttendance,
   useAttendanceHistory,
+  formatWibTime,
   type AttendanceStatus,
   type AttendanceRecord,
 } from "@/hooks/useAttendance";
@@ -144,7 +145,7 @@ const Dashboard = () => {
             <p className="text-xs font-medium text-zinc-500">Check In</p>
             <p className="text-sm font-semibold text-zinc-900">
               {todayAttendance?.checkInTime
-                ? `${dayjs(todayAttendance.checkInTime).format("HH:mm")} WIB`
+                ? `${formatWibTime(todayAttendance.checkInTime)} WIB`
                 : "--:--"}
             </p>
           </div>
@@ -153,7 +154,7 @@ const Dashboard = () => {
             <p className="text-xs font-medium text-zinc-500">Check Out</p>
             <p className="text-sm font-semibold text-zinc-900">
               {todayAttendance?.checkOutTime
-                ? `${dayjs(todayAttendance.checkOutTime).format("HH:mm")} WIB`
+                ? `${formatWibTime(todayAttendance.checkOutTime)} WIB`
                 : "--:--"}
             </p>
           </div>
@@ -319,7 +320,7 @@ const Dashboard = () => {
                   <p className="text-sm text-zinc-600">Check In</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkInTime
-                      ? `${dayjs(item.checkInTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkInTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">
@@ -330,7 +331,7 @@ const Dashboard = () => {
                   <p className="text-sm text-zinc-600">Check Out</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkOutTime
-                      ? `${dayjs(item.checkOutTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkOutTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">

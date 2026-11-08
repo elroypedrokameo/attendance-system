@@ -19,6 +19,8 @@ import dayjs from "dayjs";
 import {
   useAttendanceSummary,
   useAdminAttendances,
+  useServerTime,
+  formatWibTime,
   type AttendanceStatus,
   type SummaryMetrics,
 } from "@/hooks/useAttendance";
@@ -57,12 +59,15 @@ const Dashboard = () => {
     title: string;
   } | null>(null);
 
-  const todayDate = dayjs().format("YYYY-MM-DD");
+  const { data: serverTimeData } = useServerTime();
+  const displayDateStr = serverTimeData?.serverData?.date
+    ? dayjs(serverTimeData.serverData.date).format("DD MMMM YYYY")
+    : dayjs().format("DD MMMM YYYY");
 
-  const { data: summaryData } = useAttendanceSummary(todayDate);
+  const { data: summaryData } = useAttendanceSummary("today");
 
   const { data: todayRecords = [], isLoading } = useAdminAttendances({
-    date: todayDate,
+    date: "today",
     status: selectedStatus,
   });
 
@@ -99,7 +104,7 @@ const Dashboard = () => {
               Admin Dashboard
             </h1>
             <p className="text-sm text-zinc-500 mt-0.5">
-              Daily WFH Attendance Overview • {dayjs().format("DD MMMM YYYY")}
+              Daily WFH Attendance Overview • {displayDateStr}
             </p>
           </div>
           <p className="text-xs text-zinc-500 mt-4">
@@ -223,7 +228,7 @@ const Dashboard = () => {
                   <p className="text-sm text-zinc-600">Check In</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkInTime
-                      ? `${dayjs(item.checkInTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkInTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">
@@ -234,7 +239,7 @@ const Dashboard = () => {
                   <p className="text-sm text-zinc-600">Check Out</p>
                   <p className="font-medium text-sm text-zinc-900">
                     {item.checkOutTime
-                      ? `${dayjs(item.checkOutTime).format("HH:mm")} WIB`
+                      ? `${formatWibTime(item.checkOutTime)} WIB`
                       : "-"}
                   </p>
                   <p className="text-xs text-zinc-500">

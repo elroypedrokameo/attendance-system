@@ -20,6 +20,7 @@ import { AttendanceController } from "./attendance/attendance.controller";
         username: config.get<string>("DB_USER", "dexa_user"),
         password: config.get<string>("DB_PASSWORD", ""),
         database: config.get<string>("DB_NAME", "attendance_db"),
+        timezone: "+07:00",
         entities: [Attendance],
         synchronize: false,
       }),

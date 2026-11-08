@@ -4,6 +4,7 @@ services:
     container_name: attendance-mysql
     restart: unless-stopped
     environment:
+      TZ: Asia/Jakarta
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-employee_db}
       MYSQL_USER: ${MYSQL_USER:-dexa_user}
@@ -32,6 +33,7 @@ services:
     container_name: attendance-employee-service
     restart: unless-stopped
     environment:
+      TZ: Asia/Jakarta
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${MYSQL_USER:-dexa_user}
@@ -53,6 +55,7 @@ services:
     container_name: attendance-attendance-service
     restart: unless-stopped
     environment:
+      TZ: Asia/Jakarta
       DB_HOST: mysql
       DB_PORT: 3306
       DB_USER: ${MYSQL_USER:-dexa_user}
@@ -74,6 +77,7 @@ services:
     container_name: attendance-api-gateway
     restart: unless-stopped
     environment:
+      TZ: Asia/Jakarta
       PORT_API_GATEWAY: 3000
       EMPLOYEE_SERVICE_HOST: employee-service
       PORT_EMPLOYEE_SERVICE: 3001

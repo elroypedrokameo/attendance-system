@@ -49,5 +49,10 @@ export class AttendanceController {
   async getSummary(@Payload() payload: { date?: string }) {
     return this.attendanceService.getSummary(payload?.date);
   }
+
+  @MessagePattern("attendance.get_server_time")
+  async getServerTime() {
+    return this.attendanceService.getServerTime();
+  }
 }
 

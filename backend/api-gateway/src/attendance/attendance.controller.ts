@@ -169,6 +169,17 @@ export class AttendanceController {
     return { ...result, data: normalizeAttendanceRecord(result.data) };
   }
 
+  @Get("server-time")
+  @Roles("ADMIN", "EMPLOYEE")
+  @ApiOperation({
+    summary: "Get authoritative server time in Asia/Jakarta (WIB)",
+  })
+  async getServerTime() {
+    return lastValueFrom(
+      this.attendanceServiceClient.send("attendance.get_server_time", {}),
+    );
+  }
+
   @Get("today")
   @Roles("EMPLOYEE")
   @ApiOperation({

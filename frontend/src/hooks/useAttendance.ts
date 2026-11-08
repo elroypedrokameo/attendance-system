@@ -53,8 +53,29 @@ export interface SubmitAttendancePayload {
   note?: string;
 }
 
+export interface ServerTimeData {
+  timestamp: number;
+  iso: string;
+  date: string;
+  time: string;
+  timezone: string;
+}
+
+export const formatWibTime = (isoOrDateStr?: string | null): string => {
+  if (!isoOrDateStr) return "-";
+  const date = new Date(isoOrDateStr);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Jakarta",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+};
+
 export const attendanceKeys = {
   all: ["attendance"] as const,
+  serverTime: () => [...attendanceKeys.all, "server-time"] as const,
   today: () => [...attendanceKeys.all, "today"] as const,
   histories: () => [...attendanceKeys.all, "history"] as const,
   history: (filters: AttendanceHistoryFilters) =>
@@ -64,6 +85,20 @@ export const attendanceKeys = {
     [...attendanceKeys.lists(), filters] as const,
   summaries: () => [...attendanceKeys.all, "summary"] as const,
   summary: (date: string) => [...attendanceKeys.summaries(), date] as const,
+};
+
+export const useServerTime = () => {
+  return useQuery<{ serverData: ServerTimeData; fetchedAtPerfMs: number }>({
+    queryKey: attendanceKeys.serverTime(),
+    queryFn: async () => {
+      const res = await apiClient.get("/attendance/server-time");
+      return {
+        serverData: res.data?.data,
+        fetchedAtPerfMs: performance.now(),
+      };
+    },
+    refetchInterval: 60_000,
+  });
 };
 
 export const useTodayAttendance = () => {
