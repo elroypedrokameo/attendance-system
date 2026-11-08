@@ -20,31 +20,16 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { diskStorage } from "multer";
-import { extname, join } from "path";
-import { existsSync, mkdirSync } from "fs";
+import { memoryStorage } from "multer";
 import { lastValueFrom } from "rxjs";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 import { CurrentUser } from "../auth/current-user.decorator";
-
-const uploadDirectory = join(process.cwd(), "uploads");
-if (!existsSync(uploadDirectory)) {
-  mkdirSync(uploadDirectory, { recursive: true });
-}
+import { R2StorageService } from "../storage/r2-storage.service";
 
 const multerOptions = {
-  storage: diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDirectory);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const ext = extname(file.originalname).toLowerCase() || ".jpg";
-      cb(null, `wfh-${uniqueSuffix}${ext}`);
-    },
-  }),
+  storage: memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024,
   },
@@ -70,6 +55,7 @@ export class AttendanceController {
     private readonly attendanceServiceClient: ClientProxy,
     @Inject("EMPLOYEE_SERVICE")
     private readonly employeeServiceClient: ClientProxy,
+    private readonly r2StorageService: R2StorageService,
   ) {}
 
   @Post("check-in")
@@ -104,10 +90,12 @@ export class AttendanceController {
       );
     }
 
+    const photoUrl = await this.r2StorageService.uploadFile(file);
+
     const result = await lastValueFrom(
       this.attendanceServiceClient.send("attendance.check_in", {
         employeeId: user.employeeId,
-        photo: file.filename,
+        photo: photoUrl,
         note,
       }),
     );
@@ -151,10 +139,12 @@ export class AttendanceController {
       );
     }
 
+    const photoUrl = await this.r2StorageService.uploadFile(file);
+
     const result = await lastValueFrom(
       this.attendanceServiceClient.send("attendance.check_out", {
         employeeId: user.employeeId,
-        photo: file.filename,
+        photo: photoUrl,
         note,
       }),
     );

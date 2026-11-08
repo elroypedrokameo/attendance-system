@@ -2,7 +2,7 @@
 
 A fullstack web application for employee Work-From-Home (WFH) attendance logging and human resources monitoring.
 
-Built with a **Microservices Architecture** using NestJS, **Database-per-service** on MySQL 8.4, and a Single Page Application (SPA) frontend using **React 19, TypeScript, TanStack Query, and Tailwind CSS**.
+Built with a **Microservices Architecture** using NestJS, **Database-per-service** on MySQL 8.4, **Cloudflare R2 Object Storage** for photo proofs, and a Single Page Application (SPA) frontend using **React 19, TypeScript, TanStack Query, and Tailwind CSS**.
 
 ---
 
@@ -13,14 +13,14 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 - **Architecture Pattern:** API Gateway + Internal Microservices via TCP Transport (`@nestjs/microservices`)
 - **Database ORM:** TypeORM with `mysql2` driver
 - **Authentication & Authorization:** JWT (`@nestjs/jwt`, `passport-jwt`, `bcrypt`) with Role-Based Access Control (RBAC: `ADMIN` vs `EMPLOYEE`)
-- **File Storage:** Multer with local disk storage (served via `@nestjs/serve-static` on `/uploads`)
+- **File Storage:** Cloudflare R2 Object Storage via `@aws-sdk/client-s3` (S3-compatible, Multer memory storage, served via Cloudflare global CDN)
 - **API Documentation:** Swagger / OpenAPI (`@nestjs/swagger`)
 
 ### Database
 - **Engine:** MySQL 8.4 (InnoDB, UTF8mb4)
 - **Database-per-Service Pattern:**
   - `employee_db`: Manages master departments, employees, and user login credentials
-  - `attendance_db`: Manages daily attendance records, check-in/out timestamps, WFH photo proof filenames, and attendance statuses
+  - `attendance_db`: Manages daily attendance records, check-in/out timestamps, Cloudflare R2 photo proof URLs, and attendance statuses
 
 ### Frontend
 - **Core:** React 19 + TypeScript + Vite
@@ -29,9 +29,11 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 - **HTTP Client:** Axios with JWT request interceptors & automatic redirect on session expiry
 - **Webcam & Capture:** `react-webcam` (with direct file upload fallback)
 
-### Infrastructure & Deployment
+### Infrastructure, CI/CD & Deployment
 - **Containerization:** Docker & Docker Compose
-- **Reverse Proxy:** Nginx (proxies `/api` and `/uploads` directly to the API Gateway)
+- **Reverse Proxy:** Nginx (serving React SPA on port 80 and proxying `/api` to the API Gateway)
+- **Cloud Storage:** Cloudflare R2 Bucket (`dexa-attendance-system`) with Public R2 CDN delivery
+- **CI/CD Pipeline:** GitHub Actions (`.github/workflows/deploy.yml`) for automated TypeScript validation and zero-downtime SSH deployment to VPS
 
 ---
 
@@ -41,21 +43,21 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
                     ┌────────────────────────┐
                     │  Browser (React 19)    │
                     └───────────┬────────────┘
-                                │ :8080
+                                │ :80 (HTTP)
                                 ▼
                     ┌────────────────────────┐
                     │  Nginx Reverse Proxy   │
                     └───────────┬────────────┘
-                                │ Proxies /api and /uploads
+                                │ Proxies /api
                                 ▼
-                    ┌────────────────────────┐
-                    │      api-gateway       │
-                    │   (HTTP REST :3000)    │
-                    │  Auth / RBAC / Multer  │
-                    └─────┬────────────┬─────┘
-                          │            │
-               TCP :3001  │            │  TCP :3002
-                          ▼            ▼
+                    ┌────────────────────────┐         Uploads Photo
+                    │      api-gateway       ├─────────────────────────┐
+                    │   (HTTP REST :3000)    │                         ▼
+                    │  Auth / RBAC / Multer  │              ┌─────────────────────┐
+                    └─────┬────────────┬─────┘              │    Cloudflare R2    │
+                          │            │                    │   Object Storage    │
+               TCP :3001  │            │  TCP :3002         │ (Public CDN URL)    │
+                          ▼            ▼                    └─────────────────────┘
              ┌──────────────────┐    ┌────────────────────┐
              │ employee-service │    │ attendance-service │
              └────────┬─────────┘    └─────────┬──────────┘
@@ -67,11 +69,12 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 
 ### Architectural Highlights
 
-1. **API Gateway:** The single external HTTP entry point. Handles JWT verification, role-based guard enforcement (`ADMIN` vs `EMPLOYEE`), multipart file uploads (photo proof), and API composition (merging attendance records with employee details across microservices).
-2. **Internal Microservices (TCP):** `employee-service` and `attendance-service` run in Docker's private bridge network, communicating over NestJS native TCP transport using `@MessagePattern`.
-3. **Database-per-Service:** Each microservice manages its own schema (`employee_db` and `attendance_db`), ensuring clean domain boundary isolation.
-4. **Server-Side Timestamping:** Dates and timestamps are captured on the server (`new Date()`) when requests arrive, preventing client-side clock tampering. Check-ins after the configured `WORK_START_TIME` (default `09:15`) are automatically flagged as `LATE`.
-5. **Duplicate Prevention:** A unique constraint on `(employee_id, date)` guarantees an employee cannot check in multiple times on the same calendar day.
+1. **API Gateway:** The single external HTTP entry point. Handles JWT verification, role-based guard enforcement (`ADMIN` vs `EMPLOYEE`), and API composition (merging attendance records with employee details across microservices).
+2. **Cloudflare R2 Photo Storage:** Check-in and check-out photos are streamed directly into Cloudflare R2 using Multer `memoryStorage()`, keeping server disks completely stateless and delivering photos through Cloudflare's high-speed global CDN (`.r2.dev`).
+3. **Internal Microservices (TCP):** `employee-service` and `attendance-service` run in Docker's private bridge network, communicating over NestJS native TCP transport using `@MessagePattern`.
+4. **Database-per-Service:** Each microservice manages its own schema (`employee_db` and `attendance_db`), ensuring clean domain boundary isolation.
+5. **Server-Side Timestamping:** Dates and timestamps are captured on the server (`new Date()`) when requests arrive, preventing client-side clock tampering. Check-ins after the configured `WORK_START_TIME` (default `09:15`) are automatically flagged as `LATE`.
+6. **Duplicate Prevention:** A unique constraint on `(employee_id, date)` guarantees an employee cannot check in multiple times on the same calendar day.
 
 ---
 
@@ -93,7 +96,7 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
    ```bash
    cp .env.example .env
    ```
-   *(The default `.env` is already pre-configured for local docker execution).*
+   *(Configure your database passwords, JWT secrets, and Cloudflare R2 credentials in `.env`).*
 
 3. **Build and start all services:**
    ```bash
@@ -106,7 +109,7 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
    ```
 
 5. **Access the application:**
-   - **Frontend Web App:** [http://localhost:8080](http://localhost:8080)
+   - **Frontend Web App:** [http://localhost](http://localhost) (Port 80)
    - **Interactive Swagger API Docs:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
    - **API Gateway Base URL:** [http://localhost:3000/api](http://localhost:3000/api)
    - **MySQL Host Port:** `localhost:3307`
@@ -118,20 +121,42 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 
 ---
 
-## 4. Default Seed Accounts
+## 4. CI/CD Deployment with GitHub Actions
 
-The database is automatically pre-seeded with departments, employees, and user credentials via `database/init.sql`:
+The repository includes a production-ready automated deployment workflow at `.github/workflows/deploy.yml`:
 
-| Role | Email | Password | Access & Capabilities |
-| :--- | :--- | :--- | :--- |
-| **HR Admin** | `admin@dexa.com` | `admin123` | Full access to HR Dashboard, Employee CRUD, and Monitoring Attendances (view-only) |
-| **WFH Employee** | `budi@dexa.com` | `password123` | Employee Dashboard, Check-in with photo proof & work note, Check-out, History, Profile |
-| **WFH Employee** | `siti@dexa.com` | `password123` | Engineering Department Employee account |
-| **WFH Employee** | `agus@dexa.com` | `password123` | Finance Department Employee account |
+1. **Validation Stage (`validate`):**
+   - Automatically builds and typechecks all 3 backend microservices and the Vite frontend on GitHub Runners on every `push` to `main`.
+2. **Deployment Stage (`deploy`):**
+   - Executes remote SSH commands on your production VPS.
+   - Pulls the latest commits (`git pull origin main`) and rebuilds the containers (`docker compose up --build -d`).
+   - Automatically prunes dangling Docker images to preserve server disk space.
+
+### Required GitHub Secrets
+To enable automated deployments, configure the following secrets in **Repository Settings $\rightarrow$ Secrets and variables $\rightarrow$ Actions**:
+- `VPS_HOST`: Public IP of your VPS
+- `VPS_USERNAME`: SSH username (`root` or sudo user)
+- `VPS_SSH_KEY`: SSH private key for authentication
+- `VPS_PORT`: SSH port (default: `22`)
 
 ---
 
-## 5. API Endpoints Reference
+## 5. Default Seed Accounts
+
+The database is automatically pre-seeded with departments, employees, and user credentials via `database/init.sql`:
+
+| Role | Name | Department & Position | Email | Password | Access & Capabilities |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **HR Admin** | Elroy Admin | Human Resources (HR Administrator) | `admin@dexa.com` | `admin123` | Full access: HR Monitoring Dashboard, Employee CRUD, View-only Attendance records |
+| **WFH Employee** | Elroy Kameo | IT Department (Software Engineer) | `elroy@dexa.com` | `password123` | Employee Dashboard, Check-in/out with Cloudflare R2 photo, History, Profile |
+| **WFH Employee** | Sarah Wijaya | Product Design (UI/UX Designer) | `sarah.wijaya@dexa.com` | `password123` | Active employee account with attendance history |
+| **WFH Employee** | Budi Santoso | IT Department (Backend Engineer) | `budi.santoso@dexa.com` | `password123` | Active employee account with attendance history |
+| **WFH Employee** | Amanda Putri | Human Resources (HR Specialist) | `amanda.putri@dexa.com` | `password123` | Active employee account |
+| **Inactive** | Kevin Pratama | Finance & Accounting (Financial Analyst) | `kevin.pratama@dexa.com` | `password123` | Inactive employee account (`is_active = 0`) for testing login block / filter |
+
+---
+
+## 6. API Endpoints Reference
 
 All endpoints are exposed through the API Gateway with prefix `/api`. Detailed schema definitions and request/response payloads are accessible in Swagger at `http://localhost:3000/api/docs`.
 
@@ -154,8 +179,8 @@ All endpoints are exposed through the API Gateway with prefix `/api`. Detailed s
 ### Attendance (Employee & Monitoring)
 | Method | Endpoint | Authorization | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/attendance/check-in` | Employee | Submit daily check-in (multipart: `photo` image file, `note` work description) |
-| `POST` | `/api/attendance/check-out` | Employee | Submit daily check-out (multipart: `photo` image file) |
+| `POST` | `/api/attendance/check-in` | Employee | Submit daily check-in (multipart: `photo` image uploaded to Cloudflare R2, `note` work description) |
+| `POST` | `/api/attendance/check-out` | Employee | Submit daily check-out (multipart: `photo` image uploaded to Cloudflare R2) |
 | `GET` | `/api/attendance/today` | Employee | Retrieve authenticated employee's check-in/out status for today |
 | `GET` | `/api/attendance/history` | Employee | Retrieve authenticated employee's historical attendance records |
 | `GET` | `/api/attendance` | HR Admin | Monitor all employee attendance records with date, department, and status filters |
@@ -163,12 +188,15 @@ All endpoints are exposed through the API Gateway with prefix `/api`. Detailed s
 
 ---
 
-## 6. Project Directory Structure
+## 7. Project Directory Structure
 
 ```
 attendance-system/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           # Automated CI/CD build & deploy pipeline
 ├── backend/
-│   ├── api-gateway/             # HTTP REST Gateway, Auth, RBAC, File Uploads, Swagger
+│   ├── api-gateway/             # HTTP REST Gateway, Auth, RBAC, Cloudflare R2, Swagger
 │   ├── attendance-service/      # Attendance TCP microservice & attendance_db logic
 │   └── employee-service/        # Employee & User TCP microservice & employee_db logic
 ├── frontend/
@@ -187,4 +215,3 @@ attendance-system/
 ├── .env.example                 # Environment configuration template
 └── README.md                    # Project documentation
 ```
-

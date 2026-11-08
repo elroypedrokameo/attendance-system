@@ -43,7 +43,7 @@ export class AttendanceService {
       employeeId,
       date: today,
       checkInTime: now,
-      checkInPhoto: `/uploads/${photo}`,
+      checkInPhoto: photo,
       checkInNote: note || null,
       status,
     });
@@ -88,7 +88,7 @@ export class AttendanceService {
     }
 
     attendance.checkOutTime = now;
-    attendance.checkOutPhoto = `/uploads/${photo}`;
+    attendance.checkOutPhoto = photo;
     attendance.checkOutNote = note || null;
 
     const saved = await this.attendanceRepository.save(attendance);

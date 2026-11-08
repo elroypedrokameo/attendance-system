@@ -33,7 +33,7 @@ export class Attendance {
   @Column({ name: "check_in_time", type: "datetime", nullable: true })
   checkInTime: Date | null;
 
-  @Column({ name: "check_in_photo", length: 255, nullable: true })
+  @Column({ name: "check_in_photo", length: 500, nullable: true })
   checkInPhoto: string | null;
 
   @Column({ name: "check_in_note", length: 500, nullable: true })
@@ -42,7 +42,7 @@ export class Attendance {
   @Column({ name: "check_out_time", type: "datetime", nullable: true })
   checkOutTime: Date | null;
 
-  @Column({ name: "check_out_photo", length: 255, nullable: true })
+  @Column({ name: "check_out_photo", length: 500, nullable: true })
   checkOutPhoto: string | null;
 
   @Column({ name: "check_out_note", length: 500, nullable: true })

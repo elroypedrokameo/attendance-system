@@ -3,11 +3,10 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
 import { PassportModule } from "@nestjs/passport";
 import { JwtModule } from "@nestjs/jwt";
 import { ClientsModule, Transport } from "@nestjs/microservices";
-import { ServeStaticModule } from "@nestjs/serve-static";
-import { join } from "path";
 import { JwtStrategy } from "./auth/jwt.strategy";
 import { JwtAuthGuard } from "./auth/jwt-auth.guard";
 import { RolesGuard } from "./auth/roles.guard";
+import { R2StorageService } from "./storage/r2-storage.service";
 import { AuthController } from "./auth/auth.controller";
 import { EmployeeController } from "./employee/employee.controller";
 import { AttendanceController } from "./attendance/attendance.controller";
@@ -27,10 +26,6 @@ import { AttendanceController } from "./attendance/attendance.controller";
           expiresIn: config.get<string>("JWT_EXPIRATION", "1d") as any,
         },
       }),
-    }),
-    ServeStaticModule.forRoot({
-      rootPath: join(process.cwd(), "uploads"),
-      serveRoot: "/uploads",
     }),
     ClientsModule.registerAsync([
       {
@@ -60,7 +55,7 @@ import { AttendanceController } from "./attendance/attendance.controller";
     ]),
   ],
   controllers: [AuthController, EmployeeController, AttendanceController],
-  providers: [JwtStrategy, JwtAuthGuard, RolesGuard],
+  providers: [JwtStrategy, JwtAuthGuard, RolesGuard, R2StorageService],
 })
 export class AppModule {}
 
