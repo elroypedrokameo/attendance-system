@@ -29,11 +29,10 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 - **HTTP Client:** Axios with JWT request interceptors & automatic redirect on session expiry
 - **Webcam & Capture:** `react-webcam` (with direct file upload fallback)
 
-### Infrastructure, CI/CD & Deployment
+### Infrastructure & Deployment
 - **Containerization:** Docker & Docker Compose
 - **Reverse Proxy:** Nginx (serving React SPA on port 80 and proxying `/api` to the API Gateway)
 - **Cloud Storage:** Cloudflare R2 Bucket (`dexa-attendance-system`) with Public R2 CDN delivery
-- **CI/CD Pipeline:** GitHub Actions (`.github/workflows/deploy.yml`) for automated TypeScript validation and zero-downtime SSH deployment to VPS
 
 ---
 
@@ -121,27 +120,7 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 
 ---
 
-## 4. CI/CD Deployment with GitHub Actions
-
-The repository includes a production-ready automated deployment workflow at `.github/workflows/deploy.yml`:
-
-1. **Validation Stage (`validate`):**
-   - Automatically builds and typechecks all 3 backend microservices and the Vite frontend on GitHub Runners on every `push` to `main`.
-2. **Deployment Stage (`deploy`):**
-   - Executes remote SSH commands on your production VPS.
-   - Pulls the latest commits (`git pull origin main`) and rebuilds the containers (`docker compose up --build -d`).
-   - Automatically prunes dangling Docker images to preserve server disk space.
-
-### Required GitHub Secrets
-To enable automated deployments, configure the following secrets in **Repository Settings $\rightarrow$ Secrets and variables $\rightarrow$ Actions**:
-- `VPS_HOST`: Public IP of your VPS
-- `VPS_USERNAME`: SSH username (`root` or sudo user)
-- `VPS_SSH_KEY`: SSH private key for authentication
-- `VPS_PORT`: SSH port (default: `22`)
-
----
-
-## 5. Default Seed Accounts
+## 4. Default Seed Accounts
 
 The database is automatically pre-seeded with departments, employees, and user credentials via `database/init.sql`:
 
@@ -156,7 +135,7 @@ The database is automatically pre-seeded with departments, employees, and user c
 
 ---
 
-## 6. API Endpoints Reference
+## 5. API Endpoints Reference
 
 All endpoints are exposed through the API Gateway with prefix `/api`. Detailed schema definitions and request/response payloads are accessible in Swagger at `http://localhost:3000/api/docs`.
 
@@ -188,13 +167,10 @@ All endpoints are exposed through the API Gateway with prefix `/api`. Detailed s
 
 ---
 
-## 7. Project Directory Structure
+## 6. Project Directory Structure
 
 ```
 attendance-system/
-├── .github/
-│   └── workflows/
-│       └── deploy.yml           # Automated CI/CD build & deploy pipeline
 ├── backend/
 │   ├── api-gateway/             # HTTP REST Gateway, Auth, RBAC, Cloudflare R2, Swagger
 │   ├── attendance-service/      # Attendance TCP microservice & attendance_db logic
