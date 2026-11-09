@@ -263,7 +263,7 @@ export const Select: React.FC<SelectProps> = ({
             onChange={(e) => setSearch(e.target.value)}
             onClick={(e) => e.stopPropagation()}
             placeholder={selectedLabel || placeholder}
-            className="min-w-0 flex-1 h-full bg-transparent text-sm text-zinc-900 placeholder:text-zinc-400 outline-none border-none shadow-none ring-0 focus:outline-none focus:border-none focus:ring-0 focus:shadow-none p-0"
+            className="min-w-0 flex-1 h-full bg-transparent text-base sm:text-sm text-zinc-900 placeholder:text-zinc-400 outline-none border-none shadow-none ring-0 focus:outline-none focus:border-none focus:ring-0 focus:shadow-none p-0"
           />
         ) : (
           <div className="flex items-center gap-2 min-w-0 flex-1">
