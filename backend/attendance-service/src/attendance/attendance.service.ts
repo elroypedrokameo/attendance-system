@@ -201,8 +201,7 @@ export class AttendanceService {
 
     const queryBuilder = this.attendanceRepository
       .createQueryBuilder("att")
-      .orderBy("att.date", "DESC")
-      .addOrderBy("att.checkInTime", "DESC");
+      .orderBy("att.createdAt", "DESC");
 
     if (query.date) {
       const targetDate =
