@@ -100,11 +100,3 @@ INSERT INTO attendances (employee_id, date, check_in_time, check_in_photo, check
 (3, CURRENT_DATE, CONCAT(CURRENT_DATE, ' 08:58:00'), 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80', 'Starting design system token audit and mobile responsive wireframes.', CONCAT(CURRENT_DATE, ' 17:32:00'), 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80', 'Completed mobile wireframes and handed off Figma specs to frontend.', 'ON_TIME'),
 (4, CURRENT_DATE, CONCAT(CURRENT_DATE, ' 09:24:00'), 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80', 'ISP outage in the morning, switched to mobile tethering for WFH.', NULL, NULL, NULL, 'LATE')
 ON DUPLICATE KEY UPDATE employee_id = VALUES(employee_id);
-
-
--- Seed Data: Sample Attendances
-INSERT INTO attendances (employee_id, date, check_in_time, check_in_photo, check_in_note, check_out_time, check_out_photo, check_out_note, status) VALUES
-(2, DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), CONCAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), ' 08:45:00'), 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80', 'Planning sprint tasks A, B, and C for project X.', CONCAT(DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY), ' 17:15:00'), 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80', 'Completed tasks A, B, and C and pushed PR for code review.', 'ON_TIME'),
-(3, CURRENT_DATE, CONCAT(CURRENT_DATE, ' 08:58:00'), 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80', 'Starting design system token audit and mobile responsive wireframes.', CONCAT(CURRENT_DATE, ' 17:32:00'), 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80', 'Completed mobile wireframes and handed off Figma specs to frontend.', 'ON_TIME'),
-(4, CURRENT_DATE, CONCAT(CURRENT_DATE, ' 09:24:00'), 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&auto=format&fit=crop&q=80', 'ISP outage in the morning, switched to mobile tethering for WFH.', NULL, NULL, NULL, 'LATE')
-ON DUPLICATE KEY UPDATE employee_id = VALUES(employee_id);

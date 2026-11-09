@@ -27,11 +27,11 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
 - **Styling:** Tailwind CSS + Lucide React Icons
 - **Server State & Caching:** TanStack Query (React Query) with custom clean-code hooks (`useAuthApi`, `useEmployees`, `useAttendance`)
 - **HTTP Client:** Axios with JWT request interceptors & automatic redirect on session expiry
-- **Webcam & Capture:** `react-webcam` (with direct file upload fallback)
+- **Webcam & Capture:** `react-webcam` (live camera capture only to prevent uploading old photos)
 
 ### Infrastructure & Deployment
 - **Containerization:** Docker & Docker Compose
-- **Reverse Proxy:** Nginx (serving React SPA on port 80 and proxying `/api` to the API Gateway)
+- **Reverse Proxy:** Nginx (serving React SPA on host port 8080 and proxying `/api` to the API Gateway)
 - **Cloud Storage:** Cloudflare R2 Bucket (`dexa-attendance-system`) with Public R2 CDN delivery
 
 ---
@@ -42,7 +42,7 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
                     ┌────────────────────────┐
                     │  Browser (React 19)    │
                     └───────────┬────────────┘
-                                │ :80 (HTTP)
+                                │ :8080 (HTTP)
                                 ▼
                     ┌────────────────────────┐
                     │  Nginx Reverse Proxy   │
@@ -108,7 +108,7 @@ Built with a **Microservices Architecture** using NestJS, **Database-per-service
    ```
 
 5. **Access the application:**
-   - **Frontend Web App:** [http://localhost](http://localhost) (Port 80)
+   - **Frontend Web App:** [http://localhost:8080](http://localhost:8080) (Port 8080)
    - **Interactive Swagger API Docs:** [http://localhost:3000/api/docs](http://localhost:3000/api/docs)
    - **API Gateway Base URL:** [http://localhost:3000/api](http://localhost:3000/api)
    - **MySQL Host Port:** `localhost:3307`

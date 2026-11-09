@@ -147,3 +147,19 @@ export const useDeactivateEmployee = () => {
   });
 };
 
+export const useActivateEmployee = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiClient.patch(`/employees/${id}`, { isActive: 1 });
+      return res.data;
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: employeeKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: employeeKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: attendanceKeys.summaries() });
+    },
+  });
+};
+

@@ -14,6 +14,7 @@ import {
   X,
   Search,
   Loader2,
+  Calendar,
 } from "lucide-react";
 import dayjs from "dayjs";
 import {
@@ -22,8 +23,20 @@ import {
   useServerTime,
   formatWibTime,
   type AttendanceStatus,
+  type AdminAttendanceRecord,
   type SummaryMetrics,
 } from "@/hooks/useAttendance";
+
+const monthOptions = [
+  { value: "", label: "Today" },
+  ...Array.from({ length: 12 }, (_, i) => {
+    const d = dayjs().month(i);
+    return {
+      value: d.format("MM"),
+      label: d.format("MMMM"),
+    };
+  }),
+];
 
 const statusOptions = [
   { value: "", label: "All Statuses" },
@@ -53,6 +66,7 @@ const getStatusLabel = (status: AttendanceStatus) => {
 
 const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedPhoto, setSelectedPhoto] = useState<{
     url: string;
@@ -66,10 +80,11 @@ const Dashboard = () => {
 
   const { data: summaryData } = useAttendanceSummary("today");
 
-  const { data: todayRecords = [], isLoading } = useAdminAttendances({
-    date: "today",
-    status: selectedStatus,
-  });
+  const { data: attendanceRecords = [], isLoading } = useAdminAttendances(
+    selectedMonth
+      ? { month: selectedMonth, status: selectedStatus }
+      : { date: "today", status: selectedStatus },
+  );
 
   const summary: SummaryMetrics = summaryData || {
     totalActiveEmployees: 0,
@@ -79,7 +94,7 @@ const Dashboard = () => {
     totalNotAttended: 0,
   };
 
-  const filteredRecords = todayRecords.filter((item) => {
+  const filteredRecords = attendanceRecords.filter((item) => {
     const query = searchQuery.trim().toLowerCase();
     const matchSearch =
       !query ||
@@ -90,6 +105,155 @@ const Dashboard = () => {
     const matchStatus = !selectedStatus || item.status === selectedStatus;
     return matchSearch && matchStatus;
   });
+
+  const selectedMonthLabel =
+    monthOptions.find((m) => m.value === selectedMonth)?.label || "";
+
+  const groupedByDate = filteredRecords.reduce<
+    Record<string, AdminAttendanceRecord[]>
+  >((acc, item) => {
+    const dateKey = dayjs(item.date).format("YYYY-MM-DD");
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
+    }
+    acc[dateKey].push(item);
+    return acc;
+  }, {});
+
+  const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) =>
+    b.localeCompare(a),
+  );
+
+  const renderAttendanceCard = (
+    item: AdminAttendanceRecord,
+    spacingClass = "mt-4",
+  ) => (
+    <div
+      key={item.id}
+      className={`bg-white p-6 rounded-xl border border-zinc-200 shadow-xs ${spacingClass}`}
+    >
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <p className="font-semibold text-sm text-zinc-900">
+            {item.employeeName}
+          </p>
+          <p className="text-xs text-zinc-500 mt-0.5">
+            {item.employeeCode} • {item.position} ({item.department})
+          </p>
+        </div>
+        <Badge variant={item.status}>{getStatusLabel(item.status)}</Badge>
+      </div>
+
+      <div className="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Work Schedule</p>
+          <p className="font-medium text-sm text-zinc-900">09:15 - 17:30</p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Check In</p>
+          <p className="font-medium text-sm text-zinc-900">
+            {item.checkInTime ? `${formatWibTime(item.checkInTime)} WIB` : "-"}
+          </p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Check Out</p>
+          <p className="font-medium text-sm text-zinc-900">
+            {item.checkOutTime
+              ? `${formatWibTime(item.checkOutTime)} WIB`
+              : "-"}
+          </p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+      </div>
+
+      {(item.checkInPhoto ||
+        item.checkInNote ||
+        item.checkOutPhoto ||
+        item.checkOutNote) && (
+        <div className="mt-4 pt-3.5 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Check-In Photo & Note */}
+          <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+            {item.checkInPhoto && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedPhoto({
+                    url: item.checkInPhoto!,
+                    title: `Check-In Photo: ${item.employeeName} (${dayjs(item.date).format("DD MMM YYYY")})`,
+                  })
+                }
+                className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                title="Click to view check-in photo"
+              >
+                <img
+                  src={item.checkInPhoto}
+                  alt={`${item.employeeName} Check-In Proof`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Eye className="w-3.5 h-3.5 text-white" />
+                </div>
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-zinc-600">
+                {item.checkInTime ? "Check-In Note" : "Attendance Note"}
+              </p>
+              <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                {item.checkInNote || "No note provided."}
+              </p>
+            </div>
+          </div>
+
+          {/* Check-Out Photo & Note */}
+          {item.checkInTime && (
+            <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+              {item.checkOutPhoto && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPhoto({
+                      url: item.checkOutPhoto!,
+                      title: `Check-Out Photo: ${item.employeeName} (${dayjs(item.date).format("DD MMM YYYY")})`,
+                    })
+                  }
+                  className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                  title="Click to view check-out photo"
+                >
+                  <img
+                    src={item.checkOutPhoto}
+                    alt={`${item.employeeName} Check-Out Proof`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </button>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-zinc-600">
+                  Check-Out Note
+                </p>
+                <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                  {item.checkOutTime
+                    ? item.checkOutNote || "No check-out note provided."
+                    : "Not checked out yet."}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -155,16 +319,19 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Today's Attendance Activity List */}
+      {/* Attendance Activity List */}
       <div>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-zinc-900">
-              Today's Attendance Activity
+              {selectedMonth
+                ? `${selectedMonthLabel} Attendance Activity`
+                : "Today's Attendance Activity"}
             </h2>
             <p className="text-xs text-zinc-500">
-              Latest employee attendance submissions for{" "}
-              {dayjs().format("DD MMM YYYY")}
+              {selectedMonth
+                ? `Employee attendance submissions grouped by date for ${selectedMonthLabel}`
+                : `Latest employee attendance submissions for ${dayjs().format("DD MMM YYYY")}`}
             </p>
           </div>
 
@@ -177,6 +344,14 @@ const Dashboard = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
+              />
+            </div>
+            <div className="w-full sm:w-44">
+              <Select
+                placeholder="Today"
+                options={monthOptions}
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
               />
             </div>
             <div className="w-full sm:w-44">
@@ -195,142 +370,40 @@ const Dashboard = () => {
             <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
           </div>
         ) : filteredRecords.length > 0 ? (
-          filteredRecords.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white p-6 rounded-xl border border-zinc-200 shadow-xs mt-4"
-            >
-              <div className="flex justify-between items-start gap-4">
-                <div>
-                  <p className="font-semibold text-sm text-zinc-900">
-                    {item.employeeName}
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-0.5">
-                    {item.employeeCode} • {item.position} ({item.department})
-                  </p>
-                </div>
-                <Badge variant={item.status}>
-                  {getStatusLabel(item.status)}
-                </Badge>
-              </div>
-
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-zinc-100">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Work Schedule</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    09:15 - 17:30
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Check In</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    {item.checkInTime
-                      ? `${formatWibTime(item.checkInTime)} WIB`
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Check Out</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    {item.checkOutTime
-                      ? `${formatWibTime(item.checkOutTime)} WIB`
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-              </div>
-
-              {(item.checkInPhoto ||
-                item.checkInNote ||
-                item.checkOutPhoto ||
-                item.checkOutNote) && (
-                <div className="mt-4 pt-3.5 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Check-In Photo & Note */}
-                  <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
-                    {item.checkInPhoto && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedPhoto({
-                            url: item.checkInPhoto!,
-                            title: `Check-In Photo: ${item.employeeName} (${dayjs(item.date).format("DD MMM YYYY")})`,
-                          })
-                        }
-                        className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                        title="Click to view check-in photo"
-                      >
-                        <img
-                          src={item.checkInPhoto}
-                          alt={`${item.employeeName} Check-In Proof`}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye className="w-3.5 h-3.5 text-white" />
-                        </div>
-                      </button>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-zinc-600">
-                        {item.checkInTime ? "Check-In Note" : "Attendance Note"}
-                      </p>
-                      <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
-                        {item.checkInNote || "No note provided."}
-                      </p>
+          selectedMonth ? (
+            <div className="space-y-6 mt-5">
+              {sortedDateKeys.map((dateKey) => (
+                <div key={dateKey}>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-zinc-200">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-zinc-500" />
+                      <h3 className="text-sm font-bold text-zinc-900">
+                        {dayjs(dateKey).format("dddd, DD MMMM YYYY")}
+                      </h3>
                     </div>
+                    <span className="text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200">
+                      {groupedByDate[dateKey].length}{" "}
+                      {groupedByDate[dateKey].length === 1
+                        ? "Record"
+                        : "Records"}
+                    </span>
                   </div>
-
-                  {/* Check-Out Photo & Note */}
-                  {item.checkInTime && (
-                    <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
-                      {item.checkOutPhoto && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedPhoto({
-                              url: item.checkOutPhoto!,
-                              title: `Check-Out Photo: ${item.employeeName} (${dayjs(item.date).format("DD MMM YYYY")})`,
-                            })
-                          }
-                          className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                          title="Click to view check-out photo"
-                        >
-                          <img
-                            src={item.checkOutPhoto}
-                            alt={`${item.employeeName} Check-Out Proof`}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Eye className="w-3.5 h-3.5 text-white" />
-                          </div>
-                        </button>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-zinc-600">
-                          Check-Out Note
-                        </p>
-                        <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
-                          {item.checkOutTime
-                            ? item.checkOutNote || "No check-out note provided."
-                            : "Not checked out yet."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  <div className="space-y-4">
+                    {groupedByDate[dateKey].map((item) =>
+                      renderAttendanceCard(item, ""),
+                    )}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))
+          ) : (
+            filteredRecords.map((item) => renderAttendanceCard(item, "mt-4"))
+          )
         ) : (
           <p className="text-sm text-zinc-500 mt-4">
-            No attendance records found for today.
+            {selectedMonth
+              ? `No attendance records found for ${selectedMonthLabel}.`
+              : "No attendance records found for today."}
           </p>
         )}
       </div>

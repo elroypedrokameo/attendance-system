@@ -45,7 +45,7 @@ export const AttendanceAction: React.FC<AttendanceActionProps> = ({ mode }) => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!photo) {
-      setError("Please capture or upload a WFH photo proof first.");
+      setError("Please capture a live WFH photo proof first.");
       return;
     }
 

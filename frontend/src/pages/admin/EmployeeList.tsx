@@ -11,6 +11,7 @@ import {
   Plus,
   Edit2,
   UserX,
+  UserCheck,
   AlertCircle,
   Search,
   Loader2,
@@ -23,6 +24,7 @@ import {
   useCreateEmployee,
   useUpdateEmployee,
   useDeactivateEmployee,
+  useActivateEmployee,
   type Department,
   type EmployeeRecord,
 } from "@/hooks/useEmployees";
@@ -62,6 +64,7 @@ export const EmployeeList: React.FC = () => {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [deactivateId, setDeactivateId] = useState<number | null>(null);
+  const [activateId, setActivateId] = useState<number | null>(null);
 
   const { data: departments = [] } = useDepartments();
   const { data: employees = [], isLoading } = useEmployees({
@@ -73,6 +76,7 @@ export const EmployeeList: React.FC = () => {
   const createEmployee = useCreateEmployee();
   const updateEmployee = useUpdateEmployee();
   const deactivateEmployee = useDeactivateEmployee();
+  const activateEmployee = useActivateEmployee();
 
   const isSubmitting = createEmployee.isPending || updateEmployee.isPending;
 
@@ -185,6 +189,16 @@ export const EmployeeList: React.FC = () => {
       setDeactivateId(null);
     } catch {
       setDeactivateId(null);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (activateId === null) return;
+    try {
+      await activateEmployee.mutateAsync(activateId);
+      setActivateId(null);
+    } catch {
+      setActivateId(null);
     }
   };
 
@@ -309,17 +323,29 @@ export const EmployeeList: React.FC = () => {
                           onClick={() => handleOpenEdit(emp)}
                           className="px-2.5 py-1.5 text-xs"
                           title="Edit Employee"
+                          aria-label="Edit Employee"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </Button>
-                        {emp.isActive === 1 && (
+                        {emp.isActive === 1 ? (
                           <Button
                             variant="secondary"
                             onClick={() => setDeactivateId(emp.id)}
                             className="px-2.5 py-1.5 text-xs text-rose-600 hover:bg-rose-50"
                             title="Deactivate Employee"
+                            aria-label="Deactivate Employee"
                           >
                             <UserX className="w-3.5 h-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setActivateId(emp.id)}
+                            className="px-2.5 py-1.5 text-xs text-emerald-700 hover:bg-emerald-50"
+                            title="Activate Employee"
+                            aria-label="Activate Employee"
+                          >
+                            <UserCheck className="w-3.5 h-3.5" />
                           </Button>
                         )}
                       </div>
@@ -518,6 +544,38 @@ export const EmployeeList: React.FC = () => {
               onClick={handleDeactivate}
             >
               Yes, Deactivate
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Activate Confirmation Modal */}
+      <Modal
+        isOpen={activateId !== null}
+        onClose={() => setActivateId(null)}
+        title="Confirm Employee Activation"
+        maxWidth="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-zinc-600">
+            Are you sure you want to reactivate this employee? They will regain
+            access to sign in and record daily WFH attendance.
+          </p>
+          <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setActivateId(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={activateEmployee.isPending}
+              onClick={handleActivate}
+            >
+              Yes, Activate
             </Button>
           </div>
         </div>

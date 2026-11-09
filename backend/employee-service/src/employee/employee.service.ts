@@ -208,6 +208,10 @@ export class EmployeeService {
       departmentId: data.departmentId
         ? Number(data.departmentId)
         : employee.departmentId,
+      isActive:
+        data.isActive !== undefined
+          ? Number(data.isActive)
+          : employee.isActive,
     });
     const updated = await this.employeeRepository.save(employee);
 
