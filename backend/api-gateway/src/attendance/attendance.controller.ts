@@ -20,34 +20,90 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { memoryStorage } from "multer";
+import { Request } from "express";
+import { FileFilterCallback, memoryStorage } from "multer";
 import { lastValueFrom } from "rxjs";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
-import { CurrentUser } from "../auth/current-user.decorator";
+import {
+  CurrentUser,
+  AuthenticatedUser,
+} from "../auth/current-user.decorator";
 import { R2StorageService } from "../storage/r2-storage.service";
+
+export type AttendanceStatusType =
+  | "ON_TIME"
+  | "LATE"
+  | "LEAVE"
+  | "SICK"
+  | "ABSENT";
+
+export interface AttendanceRecordItem {
+  id: number;
+  employeeId: number;
+  date: string;
+  checkInTime: string | Date | null;
+  checkInPhoto: string | null;
+  checkInNote: string | null;
+  checkOutTime: string | Date | null;
+  checkOutPhoto: string | null;
+  checkOutNote: string | null;
+  status: AttendanceStatusType;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+}
+
+export interface EmployeeSummaryItem {
+  id: number;
+  employeeCode: string;
+  name: string;
+  position: string;
+  department?: {
+    id: number;
+    name: string;
+  };
+}
+
+export interface AttendanceHistoryQuery {
+  month?: string;
+  status?: AttendanceStatusType;
+}
+
+export interface AttendanceListQuery {
+  date?: string;
+  month?: string;
+  employeeId?: number;
+  status?: AttendanceStatusType;
+  page?: number;
+  limit?: number;
+}
 
 const multerOptions = {
   storage: memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024,
   },
-  fileFilter: (req: any, file: any, cb: any) => {
+  fileFilter: (
+    _req: Request,
+    file: Express.Multer.File,
+    cb: FileFilterCallback,
+  ) => {
     if (file.mimetype.match(/\/(jpg|jpeg|png|webp)$/)) {
       cb(null, true);
     } else {
       cb(
         new BadRequestException("Only JPG, PNG, or WEBP images are allowed"),
-        false,
       );
     }
   },
 };
 
-function normalizeAttendanceRecord(item: any) {
+function normalizeAttendanceRecord<
+  T extends { checkInPhoto?: string | null; checkOutPhoto?: string | null },
+>(item: T | null | undefined): T | null | undefined {
   if (!item) return item;
-  const normalize = (url: string | null) => {
+  const normalize = (url?: string | null) => {
     if (!url) return null;
     return url.replace(/^https:\/\/pub-[^/]+\.r2\.dev\//, "/api/storage/");
   };
@@ -89,7 +145,7 @@ export class AttendanceController {
     },
   })
   async checkIn(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Body("note") note?: string,
   ) {
@@ -138,7 +194,7 @@ export class AttendanceController {
     },
   })
   async checkOut(
-    @CurrentUser() user: any,
+    @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Body("note") note?: string,
   ) {
@@ -185,7 +241,7 @@ export class AttendanceController {
   @ApiOperation({
     summary: "Get today's attendance status for logged-in employee",
   })
-  async getToday(@CurrentUser() user: any) {
+  async getToday(@CurrentUser() user: AuthenticatedUser) {
     if (!user.employeeId) {
       return { success: true, data: null };
     }
@@ -208,7 +264,10 @@ export class AttendanceController {
   @ApiOperation({ summary: "Get logged-in employee attendance history" })
   @ApiQuery({ name: "month", required: false, example: "11" })
   @ApiQuery({ name: "status", required: false, example: "ON_TIME" })
-  async getMyHistory(@CurrentUser() user: any, @Query() query: any) {
+  async getMyHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: AttendanceHistoryQuery,
+  ) {
     if (!user.employeeId) {
       return { success: true, data: [] };
     }
@@ -235,7 +294,7 @@ export class AttendanceController {
   @ApiQuery({ name: "month", required: false, example: "11" })
   @ApiQuery({ name: "employeeId", required: false, example: 2 })
   @ApiQuery({ name: "status", required: false, example: "ON_TIME" })
-  async getAll(@Query() query: any) {
+  async getAll(@Query() query: AttendanceListQuery) {
     const attendanceRes = await lastValueFrom(
       this.attendanceServiceClient.send("attendance.get_all", query),
     );
@@ -248,8 +307,9 @@ export class AttendanceController {
       return attendanceRes;
     }
 
+    const records = attendanceRes.data as AttendanceRecordItem[];
     const employeeIds = Array.from(
-      new Set(attendanceRes.data.map((item: any) => item.employeeId)),
+      new Set(records.map((item) => item.employeeId)),
     );
 
     const employeesRes = await lastValueFrom(
@@ -258,14 +318,14 @@ export class AttendanceController {
       }),
     );
 
-    const employeeMap = new Map();
+    const employeeMap = new Map<number, EmployeeSummaryItem>();
     if (employeesRes?.success && Array.isArray(employeesRes.data)) {
-      employeesRes.data.forEach((emp: any) => {
+      (employeesRes.data as EmployeeSummaryItem[]).forEach((emp) => {
         employeeMap.set(emp.id, emp);
       });
     }
 
-    const mergedData = attendanceRes.data.map((item: any) => {
+    const mergedData = records.map((item) => {
       const normalized = normalizeAttendanceRecord(item);
       const emp = employeeMap.get(item.employeeId);
       return {

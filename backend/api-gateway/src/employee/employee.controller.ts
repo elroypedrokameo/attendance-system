@@ -25,6 +25,35 @@ import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 
+export interface EmployeeQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  departmentId?: number | string;
+  isActive?: number | string;
+}
+
+export interface CreateEmployeeDto {
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone?: string;
+  departmentId: number;
+  position: string;
+  joinDate: string;
+  password?: string;
+}
+
+export interface UpdateEmployeeDto {
+  name?: string;
+  email?: string;
+  phone?: string;
+  departmentId?: number;
+  position?: string;
+  joinDate?: string;
+  isActive?: number;
+}
+
 @ApiTags("Employees")
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -41,7 +70,7 @@ export class EmployeeController {
   @ApiQuery({ name: "search", required: false })
   @ApiQuery({ name: "departmentId", required: false })
   @ApiQuery({ name: "isActive", required: false })
-  async findAll(@Query() query: any) {
+  async findAll(@Query() query: EmployeeQuery) {
     return lastValueFrom(
       this.employeeServiceClient.send("employee.find_all", query),
     );
@@ -103,7 +132,7 @@ export class EmployeeController {
       },
     },
   })
-  async create(@Body() body: any) {
+  async create(@Body() body: CreateEmployeeDto) {
     if (
       !body.employeeCode ||
       !body.name ||
@@ -127,7 +156,10 @@ export class EmployeeController {
   @Patch(":id")
   @Roles("ADMIN")
   @ApiOperation({ summary: "Update employee details" })
-  async update(@Param("id", ParseIntPipe) id: number, @Body() body: any) {
+  async update(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: UpdateEmployeeDto,
+  ) {
     const result = await lastValueFrom(
       this.employeeServiceClient.send("employee.update", { id, data: body }),
     );

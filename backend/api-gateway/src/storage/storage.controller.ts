@@ -38,10 +38,14 @@ export class StorageController {
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
 
       file.stream.pipe(res);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const s3Error = err as {
+        name?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
       if (
-        err.name === "NoSuchKey" ||
-        err.$metadata?.httpStatusCode === 404
+        s3Error?.name === "NoSuchKey" ||
+        s3Error?.$metadata?.httpStatusCode === 404
       ) {
         throw new NotFoundException("Image not found");
       }

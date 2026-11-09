@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/Input";
 import { LogIn, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { useLogin } from "@/hooks/useAuthApi";
 
@@ -42,10 +43,11 @@ const Login = () => {
           : "/employee/dashboard",
         { replace: true },
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
       setError(
-        err.response?.data?.message ||
-          err.message ||
+        axiosErr.response?.data?.message ||
+          axiosErr.message ||
           "Failed to sign in. Please check your credentials.",
       );
     }

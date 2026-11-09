@@ -1,7 +1,12 @@
 import { Controller } from "@nestjs/common";
 import { MessagePattern, Payload } from "@nestjs/microservices";
-import { EmployeeService } from "./employee.service";
+import {
+  EmployeeService,
+  FindAllEmployeeQuery,
+  CreateEmployeeInput,
+} from "./employee.service";
 import { AuthService } from "../auth/auth.service";
+import { Employee } from "../entities/employee.entity";
 
 @Controller()
 export class EmployeeController {
@@ -21,7 +26,7 @@ export class EmployeeController {
   }
 
   @MessagePattern("employee.find_all")
-  async findAll(@Payload() query: any) {
+  async findAll(@Payload() query: FindAllEmployeeQuery) {
     return this.employeeService.findAll(query || {});
   }
 
@@ -36,12 +41,12 @@ export class EmployeeController {
   }
 
   @MessagePattern("employee.create")
-  async create(@Payload() data: any) {
+  async create(@Payload() data: CreateEmployeeInput) {
     return this.employeeService.create(data);
   }
 
   @MessagePattern("employee.update")
-  async update(@Payload() payload: { id: number; data: any }) {
+  async update(@Payload() payload: { id: number; data: Partial<Employee> }) {
     return this.employeeService.update(payload.id, payload.data);
   }
 

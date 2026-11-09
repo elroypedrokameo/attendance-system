@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
@@ -169,9 +170,10 @@ export const EmployeeList: React.FC = () => {
 
       setIsModalOpen(false);
       resetForm();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
       setFormError(
-        err.response?.data?.message || "Failed to save employee record.",
+        axiosErr.response?.data?.message || "Failed to save employee record.",
       );
     }
   };

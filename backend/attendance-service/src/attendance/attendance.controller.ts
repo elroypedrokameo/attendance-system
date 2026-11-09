@@ -1,6 +1,16 @@
 import { Controller } from "@nestjs/common";
 import { MessagePattern, Payload } from "@nestjs/microservices";
 import { AttendanceService } from "./attendance.service";
+import { AttendanceStatus } from "../entities/attendance.entity";
+
+export interface AttendanceQueryPayload {
+  date?: string;
+  month?: string;
+  employeeId?: number;
+  status?: AttendanceStatus;
+  page?: number;
+  limit?: number;
+}
 
 @Controller()
 export class AttendanceController {
@@ -31,7 +41,7 @@ export class AttendanceController {
     payload: {
       employeeId: number;
       month?: string;
-      status?: any;
+      status?: AttendanceStatus;
     },
   ) {
     return this.attendanceService.getMyHistory(payload.employeeId, {
@@ -41,7 +51,7 @@ export class AttendanceController {
   }
 
   @MessagePattern("attendance.get_all")
-  async getAll(@Payload() query: any) {
+  async getAll(@Payload() query: AttendanceQueryPayload) {
     return this.attendanceService.getAll(query || {});
   }
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
 import { AlertCircle, Camera } from "lucide-react";
@@ -58,10 +59,11 @@ export const AttendanceAction: React.FC<AttendanceActionProps> = ({ mode }) => {
       });
 
       navigate("/employee/dashboard", { replace: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const axiosErr = err as AxiosError<{ message?: string }>;
       setError(
-        err.response?.data?.message ||
-          err.message ||
+        axiosErr.response?.data?.message ||
+          axiosErr.message ||
           "An error occurred while submitting attendance.",
       );
     }

@@ -6,6 +6,25 @@ import { Employee } from "../entities/employee.entity";
 import { Department } from "../entities/department.entity";
 import { User, UserRole } from "../entities/user.entity";
 
+export interface FindAllEmployeeQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  departmentId?: number | string;
+  isActive?: number | string;
+}
+
+export interface CreateEmployeeInput {
+  employeeCode: string;
+  name: string;
+  email: string;
+  phone?: string;
+  departmentId: number;
+  position: string;
+  joinDate: string;
+  password?: string;
+}
+
 @Injectable()
 export class EmployeeService {
   constructor(
@@ -18,13 +37,7 @@ export class EmployeeService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async findAll(query: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    departmentId?: number;
-    isActive?: number;
-  }) {
+  async findAll(query: FindAllEmployeeQuery) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
@@ -51,7 +64,7 @@ export class EmployeeService {
       });
     }
 
-    if (query.isActive !== undefined && query.isActive !== ("" as any)) {
+    if (query.isActive !== undefined && query.isActive !== "") {
       queryBuilder.andWhere("employee.isActive = :isActive", {
         isActive: Number(query.isActive),
       });

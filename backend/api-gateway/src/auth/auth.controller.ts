@@ -11,7 +11,7 @@ import { ClientProxy } from "@nestjs/microservices";
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from "@nestjs/swagger";
 import { lastValueFrom } from "rxjs";
 import { JwtAuthGuard } from "./jwt-auth.guard";
-import { CurrentUser } from "./current-user.decorator";
+import { CurrentUser, AuthenticatedUser } from "./current-user.decorator";
 
 @ApiTags("Auth")
 @Controller("auth")
@@ -56,7 +56,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current authenticated user profile" })
-  async getProfile(@CurrentUser() user: any) {
+  async getProfile(@CurrentUser() user: AuthenticatedUser) {
     const result = await lastValueFrom(
       this.employeeServiceClient.send("auth.get_profile", {
         userId: user.userId,
