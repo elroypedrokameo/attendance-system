@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { LiveClock } from "@/components/ui/LiveClock";
 import { Select } from "@/components/ui/Select";
 import {
+  Calendar,
   CalendarCheck,
   Camera,
   CheckCircle2,
@@ -78,6 +79,147 @@ const Dashboard = () => {
       month: selectedMonth,
       status: selectedStatus,
     });
+
+  const groupedByMonth = historyData.reduce<
+    Record<string, AttendanceRecord[]>
+  >((acc, item) => {
+    const monthKey = dayjs(item.date).format("YYYY-MM");
+    if (!acc[monthKey]) {
+      acc[monthKey] = [];
+    }
+    acc[monthKey].push(item);
+    return acc;
+  }, {});
+
+  const sortedMonthKeys = Object.keys(groupedByMonth).sort((a, b) =>
+    b.localeCompare(a),
+  );
+
+  const renderHistoryCard = (
+    item: AttendanceRecord,
+    spacingClass = "mt-4",
+  ) => (
+    <div
+      key={item.id}
+      className={`bg-white p-6 rounded-xl border border-zinc-200 shadow-xs ${spacingClass}`}
+    >
+      <div className="flex justify-between items-center">
+        <p className="font-medium text-sm text-zinc-900">
+          {dayjs(item.date).format("DD MMM YYYY")}
+        </p>
+        <Badge variant={item.status}>{getStatusLabel(item.status)}</Badge>
+      </div>
+
+      <div className="flex justify-between items-center mt-3">
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Work Schedule</p>
+          <p className="font-medium text-sm text-zinc-900">09:15 - 17:30</p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Check In</p>
+          <p className="font-medium text-sm text-zinc-900">
+            {item.checkInTime ? `${formatWibTime(item.checkInTime)} WIB` : "-"}
+          </p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <p className="text-sm text-zinc-600">Check Out</p>
+          <p className="font-medium text-sm text-zinc-900">
+            {item.checkOutTime
+              ? `${formatWibTime(item.checkOutTime)} WIB`
+              : "-"}
+          </p>
+          <p className="text-xs text-zinc-500">
+            {dayjs(item.date).format("DD MMM YYYY")}
+          </p>
+        </div>
+      </div>
+
+      {(item.checkInPhoto ||
+        item.checkInNote ||
+        item.checkOutPhoto ||
+        item.checkOutNote) && (
+        <div className="mt-4 pt-3.5 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Check-In Photo & Note */}
+          <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+            {item.checkInPhoto && (
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedPhoto({
+                    url: item.checkInPhoto!,
+                    title: `Check-In Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
+                  })
+                }
+                className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                title="Click to view check-in photo"
+              >
+                <img
+                  src={item.checkInPhoto}
+                  alt="Check-In Proof"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Eye className="w-3.5 h-3.5 text-white" />
+                </div>
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-zinc-600">
+                {item.checkInTime ? "Check-In Note" : "Attendance Note"}
+              </p>
+              <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                {item.checkInNote || "No note provided."}
+              </p>
+            </div>
+          </div>
+
+          {/* Check-Out Photo & Note */}
+          {item.checkInTime && (
+            <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
+              {item.checkOutPhoto && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSelectedPhoto({
+                      url: item.checkOutPhoto!,
+                      title: `Check-Out Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
+                    })
+                  }
+                  className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
+                  title="Click to view check-out photo"
+                >
+                  <img
+                    src={item.checkOutPhoto}
+                    alt="Check-Out Proof"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </button>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-zinc-600">
+                  Check-Out Note
+                </p>
+                <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
+                  {item.checkOutTime
+                    ? item.checkOutNote || "No check-out note provided."
+                    : "Not checked out yet."}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -292,134 +434,37 @@ const Dashboard = () => {
             <Loader2 className="w-6 h-6 animate-spin text-zinc-400" />
           </div>
         ) : historyData && historyData.length > 0 ? (
-          historyData.map((item: AttendanceRecord) => (
-            <div
-              key={item.id}
-              className="bg-white p-6 rounded-xl border border-zinc-200 shadow-xs mt-4"
-            >
-              <div className="flex justify-between items-center">
-                <p className="font-medium text-sm text-zinc-900">
-                  {dayjs(item.date).format("DD MMM YYYY")}
-                </p>
-                <Badge variant={item.status}>
-                  {getStatusLabel(item.status)}
-                </Badge>
-              </div>
-
-              <div className="flex justify-between items-center mt-3">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Work Schedule</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    09:15 - 17:30
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Check In</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    {item.checkInTime
-                      ? `${formatWibTime(item.checkInTime)} WIB`
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm text-zinc-600">Check Out</p>
-                  <p className="font-medium text-sm text-zinc-900">
-                    {item.checkOutTime
-                      ? `${formatWibTime(item.checkOutTime)} WIB`
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {dayjs(item.date).format("DD MMM YYYY")}
-                  </p>
-                </div>
-              </div>
-
-              {(item.checkInPhoto ||
-                item.checkInNote ||
-                item.checkOutPhoto ||
-                item.checkOutNote) && (
-                <div className="mt-4 pt-3.5 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Check-In Photo & Note */}
-                  <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
-                    {item.checkInPhoto && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedPhoto({
-                            url: item.checkInPhoto!,
-                            title: `Check-In Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
-                          })
-                        }
-                        className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                        title="Click to view check-in photo"
-                      >
-                        <img
-                          src={item.checkInPhoto}
-                          alt="Check-In Proof"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                        />
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Eye className="w-3.5 h-3.5 text-white" />
-                        </div>
-                      </button>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-zinc-600">
-                        {item.checkInTime ? "Check-In Note" : "Attendance Note"}
-                      </p>
-                      <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
-                        {item.checkInNote || "No note provided."}
-                      </p>
+          !selectedMonth ? (
+            <div className="space-y-6 mt-5">
+              {sortedMonthKeys.map((monthKey) => (
+                <div key={monthKey}>
+                  <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-zinc-200">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-zinc-500" />
+                      <h3 className="text-sm font-bold text-zinc-900">
+                        {dayjs(`${monthKey}-01`).format("MMMM YYYY")}
+                      </h3>
                     </div>
+                    <span className="text-xs font-medium text-zinc-600 bg-zinc-100 px-2.5 py-0.5 rounded-full border border-zinc-200">
+                      {groupedByMonth[monthKey].length}{" "}
+                      {groupedByMonth[monthKey].length === 1
+                        ? "Record"
+                        : "Records"}
+                    </span>
                   </div>
-
-                  {/* Check-Out Photo & Note */}
-                  {item.checkInTime && (
-                    <div className="flex items-start gap-3 bg-zinc-50/70 p-3 rounded-lg border border-zinc-100">
-                      {item.checkOutPhoto && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelectedPhoto({
-                              url: item.checkOutPhoto!,
-                              title: `Check-Out Photo (${dayjs(item.date).format("DD MMM YYYY")})`,
-                            })
-                          }
-                          className="group relative w-12 h-12 rounded-lg overflow-hidden border border-zinc-200 shrink-0 cursor-pointer focus:outline-none"
-                          title="Click to view check-out photo"
-                        >
-                          <img
-                            src={item.checkOutPhoto}
-                            alt="Check-Out Proof"
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <Eye className="w-3.5 h-3.5 text-white" />
-                          </div>
-                        </button>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-zinc-600">
-                          Check-Out Note
-                        </p>
-                        <p className="text-xs text-zinc-700 mt-0.5 leading-relaxed">
-                          {item.checkOutTime
-                            ? item.checkOutNote || "No check-out note provided."
-                            : "Not checked out yet."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                  <div className="space-y-4">
+                    {groupedByMonth[monthKey].map((item) =>
+                      renderHistoryCard(item, ""),
+                    )}
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
-          ))
+          ) : (
+            historyData.map((item: AttendanceRecord) =>
+              renderHistoryCard(item, "mt-4"),
+            )
+          )
         ) : (
           <p className="text-sm text-zinc-500 mt-4">
             No attendance records found.
