@@ -32,6 +32,10 @@ export class EmployeeService {
     const queryBuilder = this.employeeRepository
       .createQueryBuilder("employee")
       .leftJoinAndSelect("employee.department", "department")
+      .leftJoin("employee.user", "user")
+      .where("(user.role IS NULL OR user.role != :adminRole)", {
+        adminRole: "ADMIN",
+      })
       .orderBy("employee.id", "DESC");
 
     if (query.search) {
@@ -228,9 +232,15 @@ export class EmployeeService {
   }
 
   async countActive() {
-    const count = await this.employeeRepository.count({
-      where: { isActive: 1 },
-    });
+    const count = await this.employeeRepository
+      .createQueryBuilder("employee")
+      .leftJoin("employee.user", "user")
+      .where("employee.isActive = :isActive", { isActive: 1 })
+      .andWhere("(user.role IS NULL OR user.role != :adminRole)", {
+        adminRole: "ADMIN",
+      })
+      .getCount();
+
     return { success: true, data: { totalActive: count } };
   }
 }
