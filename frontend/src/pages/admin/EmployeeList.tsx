@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Search,
   Loader2,
+  Calendar,
 } from "lucide-react";
 import dayjs from "dayjs";
 import {
@@ -344,8 +345,31 @@ export const EmployeeList: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? "Update Employee Details" : "Add New Employee"}
         maxWidth="2xl"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="employee-form"
+              variant="primary"
+              isLoading={isSubmitting}
+            >
+              {isEditing ? "Save Changes" : "Add Employee"}
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleFormSubmit} className="space-y-4">
+        <form
+          id="employee-form"
+          onSubmit={handleFormSubmit}
+          className="space-y-4"
+        >
           {formError && (
             <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -425,15 +449,30 @@ export const EmployeeList: React.FC = () => {
             />
           </div>
 
-          <Input
-            label="Join Date"
-            type="date"
-            value={formData.joinDate}
-            onChange={(e) =>
-              setFormData({ ...formData, joinDate: e.target.value })
-            }
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-zinc-800 mb-1">
+              Join Date <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={formData.joinDate}
+                onChange={(e) =>
+                  setFormData({ ...formData, joinDate: e.target.value })
+                }
+                required
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="w-full px-3 py-2 text-sm bg-white border border-zinc-200 rounded-lg shadow-xs flex items-center justify-between text-zinc-900 pointer-events-none">
+                <span>
+                  {formData.joinDate
+                    ? dayjs(formData.joinDate).format("DD MMM YYYY")
+                    : "Select join date"}
+                </span>
+                <Calendar className="w-4 h-4 text-zinc-400" />
+              </div>
+            </div>
+          </div>
 
           {!isEditing && (
             <Input
@@ -447,19 +486,6 @@ export const EmployeeList: React.FC = () => {
               helperText="An employee login account will be created automatically."
             />
           )}
-
-          <div className="flex justify-end gap-2 pt-4 border-t border-zinc-100">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" isLoading={isSubmitting}>
-              {isEditing ? "Save Changes" : "Add Employee"}
-            </Button>
-          </div>
         </form>
       </Modal>
 
