@@ -22,7 +22,6 @@ import {
 import { FileInterceptor } from "@nestjs/platform-express";
 import { Request } from "express";
 import { FileFilterCallback, memoryStorage } from "multer";
-import { lastValueFrom } from "rxjs";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
@@ -30,54 +29,14 @@ import {
   CurrentUser,
   AuthenticatedUser,
 } from "../auth/current-user.decorator";
+import { sendRpc } from "../common/rpc.helper";
 import { R2StorageService } from "../storage/r2-storage.service";
-
-export type AttendanceStatusType =
-  | "ON_TIME"
-  | "LATE"
-  | "LEAVE"
-  | "SICK"
-  | "ABSENT";
-
-export interface AttendanceRecordItem {
-  id: number;
-  employeeId: number;
-  date: string;
-  checkInTime: string | Date | null;
-  checkInPhoto: string | null;
-  checkInNote: string | null;
-  checkOutTime: string | Date | null;
-  checkOutPhoto: string | null;
-  checkOutNote: string | null;
-  status: AttendanceStatusType;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
-}
-
-export interface EmployeeSummaryItem {
-  id: number;
-  employeeCode: string;
-  name: string;
-  position: string;
-  department?: {
-    id: number;
-    name: string;
-  };
-}
-
-export interface AttendanceHistoryQuery {
-  month?: string;
-  status?: AttendanceStatusType;
-}
-
-export interface AttendanceListQuery {
-  date?: string;
-  month?: string;
-  employeeId?: number;
-  status?: AttendanceStatusType;
-  page?: number;
-  limit?: number;
-}
+import {
+  AttendanceHistoryQueryDto,
+  AttendanceListQueryDto,
+  AttendanceRecordItem,
+  EmployeeSummaryItem,
+} from "./dto/attendance.dto";
 
 const multerOptions = {
   storage: memoryStorage(),
@@ -103,10 +62,9 @@ function normalizeAttendanceRecord<
   T extends { checkInPhoto?: string | null; checkOutPhoto?: string | null },
 >(item: T | null | undefined): T | null | undefined {
   if (!item) return item;
-  const normalize = (url?: string | null) => {
-    if (!url) return null;
-    return url.replace(/^https:\/\/pub-[^/]+\.r2\.dev\//, "/api/storage/");
-  };
+  const normalize = (url?: string | null) =>
+    url ? url.replace(/^https:\/\/pub-[^/]+\.r2\.dev\//, "/api/storage/") : null;
+
   return {
     ...item,
     checkInPhoto: normalize(item.checkInPhoto),
@@ -127,6 +85,36 @@ export class AttendanceController {
     private readonly r2StorageService: R2StorageService,
   ) {}
 
+  private async submitPhotoAttendance(
+    pattern: "attendance.check_in" | "attendance.check_out",
+    missingPhotoMessage: string,
+    user: AuthenticatedUser,
+    file: Express.Multer.File,
+    note?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException(missingPhotoMessage);
+    }
+    if (!user.employeeId) {
+      throw new BadRequestException(
+        "User is not linked to an employee profile",
+      );
+    }
+
+    const photoUrl = await this.r2StorageService.uploadFile(file);
+    const result = await sendRpc<AttendanceRecordItem>(
+      this.attendanceServiceClient,
+      pattern,
+      {
+        employeeId: user.employeeId,
+        photo: photoUrl,
+        note,
+      },
+    );
+
+    return { ...result, data: normalizeAttendanceRecord(result.data) };
+  }
+
   @Post("check-in")
   @Roles("EMPLOYEE")
   @UseInterceptors(FileInterceptor("photo", multerOptions))
@@ -144,36 +132,18 @@ export class AttendanceController {
       },
     },
   })
-  async checkIn(
+  checkIn(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Body("note") note?: string,
   ) {
-    if (!file) {
-      throw new BadRequestException("WFH photo proof is required");
-    }
-
-    if (!user.employeeId) {
-      throw new BadRequestException(
-        "User is not linked to an employee profile",
-      );
-    }
-
-    const photoUrl = await this.r2StorageService.uploadFile(file);
-
-    const result = await lastValueFrom(
-      this.attendanceServiceClient.send("attendance.check_in", {
-        employeeId: user.employeeId,
-        photo: photoUrl,
-        note,
-      }),
+    return this.submitPhotoAttendance(
+      "attendance.check_in",
+      "WFH photo proof is required",
+      user,
+      file,
+      note,
     );
-
-    if (!result.success) {
-      throw new BadRequestException(result.message);
-    }
-
-    return { ...result, data: normalizeAttendanceRecord(result.data) };
   }
 
   @Post("check-out")
@@ -193,36 +163,18 @@ export class AttendanceController {
       },
     },
   })
-  async checkOut(
+  checkOut(
     @CurrentUser() user: AuthenticatedUser,
     @UploadedFile() file: Express.Multer.File,
     @Body("note") note?: string,
   ) {
-    if (!file) {
-      throw new BadRequestException("WFH check-out photo proof is required");
-    }
-
-    if (!user.employeeId) {
-      throw new BadRequestException(
-        "User is not linked to an employee profile",
-      );
-    }
-
-    const photoUrl = await this.r2StorageService.uploadFile(file);
-
-    const result = await lastValueFrom(
-      this.attendanceServiceClient.send("attendance.check_out", {
-        employeeId: user.employeeId,
-        photo: photoUrl,
-        note,
-      }),
+    return this.submitPhotoAttendance(
+      "attendance.check_out",
+      "WFH check-out photo proof is required",
+      user,
+      file,
+      note,
     );
-
-    if (!result.success) {
-      throw new BadRequestException(result.message);
-    }
-
-    return { ...result, data: normalizeAttendanceRecord(result.data) };
   }
 
   @Get("server-time")
@@ -230,10 +182,8 @@ export class AttendanceController {
   @ApiOperation({
     summary: "Get authoritative server time in Asia/Jakarta (WIB)",
   })
-  async getServerTime() {
-    return lastValueFrom(
-      this.attendanceServiceClient.send("attendance.get_server_time", {}),
-    );
+  getServerTime() {
+    return sendRpc(this.attendanceServiceClient, "attendance.get_server_time");
   }
 
   @Get("today")
@@ -246,10 +196,10 @@ export class AttendanceController {
       return { success: true, data: null };
     }
 
-    const res = await lastValueFrom(
-      this.attendanceServiceClient.send("attendance.get_today", {
-        employeeId: user.employeeId,
-      }),
+    const res = await sendRpc<AttendanceRecordItem | null>(
+      this.attendanceServiceClient,
+      "attendance.get_today",
+      { employeeId: user.employeeId },
     );
 
     if (res?.data) {
@@ -262,22 +212,22 @@ export class AttendanceController {
   @Get("history")
   @Roles("EMPLOYEE")
   @ApiOperation({ summary: "Get logged-in employee attendance history" })
-  @ApiQuery({ name: "month", required: false, example: "11" })
-  @ApiQuery({ name: "status", required: false, example: "ON_TIME" })
   async getMyHistory(
     @CurrentUser() user: AuthenticatedUser,
-    @Query() query: AttendanceHistoryQuery,
+    @Query() query: AttendanceHistoryQueryDto,
   ) {
     if (!user.employeeId) {
       return { success: true, data: [] };
     }
 
-    const res = await lastValueFrom(
-      this.attendanceServiceClient.send("attendance.get_my_history", {
+    const res = await sendRpc<AttendanceRecordItem[]>(
+      this.attendanceServiceClient,
+      "attendance.get_my_history",
+      {
         employeeId: user.employeeId,
         month: query.month,
         status: query.status,
-      }),
+      },
     );
 
     if (Array.isArray(res?.data)) {
@@ -290,42 +240,33 @@ export class AttendanceController {
   @Get()
   @Roles("ADMIN")
   @ApiOperation({ summary: "Monitor all employee attendances (Admin)" })
-  @ApiQuery({ name: "date", required: false, example: "2026-11-07" })
-  @ApiQuery({ name: "month", required: false, example: "11" })
-  @ApiQuery({ name: "employeeId", required: false, example: 2 })
-  @ApiQuery({ name: "status", required: false, example: "ON_TIME" })
-  async getAll(@Query() query: AttendanceListQuery) {
-    const attendanceRes = await lastValueFrom(
-      this.attendanceServiceClient.send("attendance.get_all", query),
+  async getAll(@Query() query: AttendanceListQueryDto) {
+    const attendanceRes = await sendRpc<AttendanceRecordItem[]>(
+      this.attendanceServiceClient,
+      "attendance.get_all",
+      query,
     );
 
-    if (
-      !attendanceRes.success ||
-      !attendanceRes.data ||
-      attendanceRes.data.length === 0
-    ) {
+    if (!attendanceRes.data || attendanceRes.data.length === 0) {
       return attendanceRes;
     }
 
-    const records = attendanceRes.data as AttendanceRecordItem[];
     const employeeIds = Array.from(
-      new Set(records.map((item) => item.employeeId)),
+      new Set(attendanceRes.data.map((item) => item.employeeId)),
     );
 
-    const employeesRes = await lastValueFrom(
-      this.employeeServiceClient.send("employee.find_by_ids", {
-        ids: employeeIds,
-      }),
+    const employeesRes = await sendRpc<EmployeeSummaryItem[]>(
+      this.employeeServiceClient,
+      "employee.find_by_ids",
+      { ids: employeeIds },
     );
 
     const employeeMap = new Map<number, EmployeeSummaryItem>();
-    if (employeesRes?.success && Array.isArray(employeesRes.data)) {
-      (employeesRes.data as EmployeeSummaryItem[]).forEach((emp) => {
-        employeeMap.set(emp.id, emp);
-      });
+    if (Array.isArray(employeesRes.data)) {
+      employeesRes.data.forEach((emp) => employeeMap.set(emp.id, emp));
     }
 
-    const mergedData = records.map((item) => {
+    const mergedData = attendanceRes.data.map((item) => {
       const normalized = normalizeAttendanceRecord(item);
       const emp = employeeMap.get(item.employeeId);
       return {
@@ -346,18 +287,23 @@ export class AttendanceController {
   @Get("summary")
   @Roles("ADMIN")
   @ApiOperation({ summary: "Get today's attendance summary metrics (Admin)" })
+  @ApiQuery({ name: "date", required: false, example: "2026-11-07" })
   async getSummary(@Query("date") date?: string) {
     const [attSummary, empActive] = await Promise.all([
-      lastValueFrom(
-        this.attendanceServiceClient.send("attendance.get_summary", { date }),
-      ),
-      lastValueFrom(
-        this.employeeServiceClient.send("employee.count_active", {}),
+      sendRpc<{
+        date: string;
+        totalAttended: number;
+        totalOnTime: number;
+        totalLate: number;
+      }>(this.attendanceServiceClient, "attendance.get_summary", { date }),
+      sendRpc<{ totalActive: number }>(
+        this.employeeServiceClient,
+        "employee.count_active",
       ),
     ]);
 
-    const totalActiveEmployees = empActive?.data?.totalActive || 0;
-    const summaryData = attSummary?.data || {
+    const totalActiveEmployees = empActive.data?.totalActive || 0;
+    const summaryData = attSummary.data || {
       totalAttended: 0,
       totalOnTime: 0,
       totalLate: 0,

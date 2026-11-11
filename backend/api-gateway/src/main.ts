@@ -1,12 +1,29 @@
+import { BadRequestException, Logger, ValidationPipe } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
+  const logger = new Logger("Bootstrap");
   const app = await NestFactory.create(AppModule);
 
   app.enableCors();
+  app.enableShutdownHooks();
   app.setGlobalPrefix("api");
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      exceptionFactory: (errors) => {
+        const messages = errors.flatMap((err) =>
+          Object.values(err.constraints || {}),
+        );
+        return new BadRequestException(
+          messages.join(", ") || "Validation failed",
+        );
+      },
+    }),
+  );
 
   const config = new DocumentBuilder()
     .setTitle("Dexa WFH Attendance API")
@@ -22,13 +39,8 @@ async function bootstrap() {
 
   const port = process.env.PORT_API_GATEWAY || 3000;
   await app.listen(port);
-  console.log(
-    `[api-gateway] HTTP server running on http://localhost:${port}/api`,
-  );
-  console.log(
-    `[api-gateway] Swagger documentation on http://localhost:${port}/api/docs`,
-  );
+  logger.log(`HTTP server running on http://localhost:${port}/api`);
+  logger.log(`Swagger documentation on http://localhost:${port}/api/docs`);
 }
 
 bootstrap();
-

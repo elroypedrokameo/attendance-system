@@ -49,7 +49,7 @@ export class R2StorageService {
       );
     } else {
       this.logger.warn(
-        "R2 credentials not provided. Falling back to local storage.",
+        "R2 credentials not provided. File upload and download requests will fail.",
       );
     }
   }

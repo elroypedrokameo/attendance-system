@@ -2,8 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Attendance } from "./entities/attendance.entity";
-import { AttendanceService } from "./attendance/attendance.service";
-import { AttendanceController } from "./attendance/attendance.controller";
+import { AttendanceModule } from "./attendance/attendance.module";
 
 @Module({
   imports: [
@@ -25,10 +24,7 @@ import { AttendanceController } from "./attendance/attendance.controller";
         synchronize: false,
       }),
     }),
-    TypeOrmModule.forFeature([Attendance]),
+    AttendanceModule,
   ],
-  controllers: [AttendanceController],
-  providers: [AttendanceService],
 })
 export class AppModule {}
-

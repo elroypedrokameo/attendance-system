@@ -13,6 +13,21 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private formatUserProfile(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      employeeId: user.employeeId,
+      name: user.employee ? user.employee.name : "Administrator",
+      department: user.employee?.department?.name || null,
+      position: user.employee?.position || null,
+      employeeCode: user.employee?.employeeCode || null,
+      phone: user.employee?.phone || null,
+      joinDate: user.employee?.joinDate || null,
+    };
+  }
+
   async login(payload: { email: string; password: string }) {
     const { email, password } = payload;
     const user = await this.userRepository.findOne({
@@ -33,31 +48,18 @@ export class AuthService {
       return { success: false, message: "Invalid email or password" };
     }
 
-    const jwtPayload = {
+    const accessToken = this.jwtService.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
       employeeId: user.employeeId,
-    };
-
-    const accessToken = this.jwtService.sign(jwtPayload);
+    });
 
     return {
       success: true,
       data: {
         accessToken,
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          employeeId: user.employeeId,
-          employeeCode: user.employee?.employeeCode || null,
-          name: user.employee ? user.employee.name : "Administrator",
-          phone: user.employee?.phone || null,
-          department: user.employee?.department?.name || null,
-          position: user.employee?.position || null,
-          joinDate: user.employee?.joinDate || null,
-        },
+        user: this.formatUserProfile(user),
       },
     };
   }
@@ -74,19 +76,7 @@ export class AuthService {
 
     return {
       success: true,
-      data: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        employeeId: user.employeeId,
-        name: user.employee ? user.employee.name : "Administrator",
-        department: user.employee?.department?.name || null,
-        position: user.employee?.position || null,
-        employeeCode: user.employee?.employeeCode || null,
-        phone: user.employee?.phone || null,
-        joinDate: user.employee?.joinDate || null,
-      },
+      data: this.formatUserProfile(user),
     };
   }
 }
-

@@ -22,7 +22,6 @@ export class StorageController {
     @Param("filename") filename: string,
     @Res() res: Response,
   ) {
-    // Basic sanitization
     if (!/^[a-zA-Z0-9_-]+$/.test(folder) || !/^[a-zA-Z0-9_.-]+$/.test(filename)) {
       throw new BadRequestException("Invalid file path");
     }

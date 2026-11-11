@@ -4,6 +4,15 @@ import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 import { Attendance, AttendanceStatus } from "../entities/attendance.entity";
 
+export interface AttendanceQueryPayload {
+  date?: string;
+  month?: string;
+  employeeId?: number;
+  status?: AttendanceStatus;
+  page?: number;
+  limit?: number;
+}
+
 @Injectable()
 export class AttendanceService {
   constructor(
@@ -187,14 +196,7 @@ export class AttendanceService {
     };
   }
 
-  async getAll(query: {
-    date?: string;
-    month?: string;
-    employeeId?: number;
-    status?: AttendanceStatus;
-    page?: number;
-    limit?: number;
-  }) {
+  async getAll(query: AttendanceQueryPayload) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;

@@ -113,16 +113,7 @@ export class EmployeeService {
     return { success: true, data: employees };
   }
 
-  async create(data: {
-    employeeCode: string;
-    name: string;
-    email: string;
-    phone?: string;
-    departmentId: number;
-    position: string;
-    joinDate: string;
-    password?: string;
-  }) {
+  async create(data: CreateEmployeeInput) {
     const existingEmail = await this.employeeRepository.findOne({
       where: { email: data.email },
     });

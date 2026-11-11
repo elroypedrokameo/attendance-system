@@ -1,15 +1,8 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  Inject,
-  UseGuards,
-  BadRequestException,
-} from "@nestjs/common";
+import { Controller, Post, Get, Body, Inject, UseGuards } from "@nestjs/common";
 import { ClientProxy } from "@nestjs/microservices";
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from "@nestjs/swagger";
-import { lastValueFrom } from "rxjs";
+import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { sendRpc } from "../common/rpc.helper";
+import { LoginDto } from "./dto/login.dto";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { CurrentUser, AuthenticatedUser } from "./current-user.decorator";
 
@@ -23,51 +16,17 @@ export class AuthController {
 
   @Post("login")
   @ApiOperation({ summary: "Sign in user (Admin / Employee)" })
-  @ApiBody({
-    schema: {
-      type: "object",
-      required: ["email", "password"],
-      properties: {
-        email: { type: "string", example: "admin@dexa.com" },
-        password: { type: "string", example: "admin123" },
-      },
-    },
-  })
-  async login(@Body() body: { email?: string; password?: string }) {
-    if (!body.email || !body.password) {
-      throw new BadRequestException("Email and password are required");
-    }
-
-    const result = await lastValueFrom(
-      this.employeeServiceClient.send("auth.login", {
-        email: body.email,
-        password: body.password,
-      }),
-    );
-
-    if (!result.success) {
-      throw new BadRequestException(result.message);
-    }
-
-    return result;
+  login(@Body() body: LoginDto) {
+    return sendRpc(this.employeeServiceClient, "auth.login", body);
   }
 
   @Get("profile")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get current authenticated user profile" })
-  async getProfile(@CurrentUser() user: AuthenticatedUser) {
-    const result = await lastValueFrom(
-      this.employeeServiceClient.send("auth.get_profile", {
-        userId: user.userId,
-      }),
-    );
-
-    if (!result.success) {
-      throw new BadRequestException(result.message);
-    }
-
-    return result;
+  getProfile(@CurrentUser() user: AuthenticatedUser) {
+    return sendRpc(this.employeeServiceClient, "auth.get_profile", {
+      userId: user.userId,
+    });
   }
 }
-
